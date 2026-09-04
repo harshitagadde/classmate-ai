@@ -5,6 +5,7 @@ import datetime
 import streamlit as st
 from dotenv import load_dotenv
 from google import genai
+from google.genai import types
 import pypdf
 from pptx import Presentation
 import pandas as pd
@@ -461,7 +462,11 @@ elif st.session_state.user_role == "Student":
                                     image_input = Image.open(io.BytesIO(file_bytes_payload))
                                     contents = [image_input, instruction]
                                 elif ext == "pdf" and not extracted_text.strip():
-                                    pdf_part = {"mime_type": "application/pdf", "data": file_bytes_payload}
+                                    # Properly wrap raw PDF bytes using types.Part.from_bytes
+                                    pdf_part = types.Part.from_bytes(
+                                        data=file_bytes_payload,
+                                        mime_type="application/pdf"
+                                    )
                                     contents = [pdf_part, instruction]
                                 else:
                                     contents = f"{instruction}\n\n{extracted_text}"
