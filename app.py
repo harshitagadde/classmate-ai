@@ -199,9 +199,8 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# API Query Function with Auto Model Detection
+# API Query Function with Auto-Model Discovery and 503 Retry Logic
 def query_gemini(contents):
-    # Retrieve API key from Streamlit Secrets or Environment Variable
     api_key = None
     if "GEMINI_API_KEY" in st.secrets:
         api_key = st.secrets["GEMINI_API_KEY"]
@@ -213,10 +212,9 @@ def query_gemini(contents):
     
     client = genai.Client(api_key=api_key)
     
-    # 1. Hardcoded priority target from your latest error message
+    # Priority list for stable execution
     candidate_models = ['gemini-3.6-flash']
     
-    # 2. Dynamically fetch available models from Google API to prevent 404 errors
     try:
         available_models = [m.name.replace('models/', '') for m in client.models.list() if 'generateContent' in m.supported_generation_methods]
         for m in available_models:
@@ -227,15 +225,22 @@ def query_gemini(contents):
 
     last_err = None
     for model_name in candidate_models:
-        try:
-            response = client.models.generate_content(
-                model=model_name,
-                contents=contents
-            )
-            return response.text
-        except Exception as e:
-            last_err = e
-            continue
+        # Retry up to 3 times per model if a 503 error occurs
+        for attempt in range(3):
+            try:
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=contents
+                )
+                return response.text
+            except Exception as e:
+                last_err = e
+                # If server is overloaded (503), wait 2 seconds and retry
+                if "503" in str(e) or "UNAVAILABLE" in str(e):
+                    time.sleep(2)
+                    continue
+                else:
+                    break  # Try next model for non-503 errors
             
     raise Exception(f"Gemini API Error: {str(last_err)}")
 # ---------------------------------------------------------
