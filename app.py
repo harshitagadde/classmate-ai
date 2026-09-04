@@ -2,6 +2,7 @@ import os
 import io
 import time
 import datetime
+import json
 import streamlit as st
 from dotenv import load_dotenv
 from google import genai
@@ -16,6 +17,26 @@ load_dotenv()
 
 # Page Setup
 st.set_page_config(page_title="Classmate AI", page_icon="📚", layout="wide")
+
+# Persistent File Storage Paths
+STUDENT_DB_FILE = "students.json"
+ACTIVITY_LOG_FILE = "activity_logs.json"
+
+def load_json_data(file_path, default_data):
+    if os.path.exists(file_path):
+        try:
+            with open(file_path, "r") as f:
+                return json.load(f)
+        except Exception:
+            return default_data
+    return default_data
+
+def save_json_data(file_path, data):
+    try:
+        with open(file_path, "w") as f:
+            json.dump(data, f, indent=4)
+    except Exception as e:
+        st.error(f"Error saving persistent data: {e}")
 
 # Track Session Metrics & Activity Logs Real-Time
 if "start_time" not in st.session_state:
@@ -35,23 +56,33 @@ if "todo_list" not in st.session_state:
         {"task": "Revise Chapter 1 Notes", "done": False},
         {"task": "Solve Practice Quiz on Math", "done": True}
     ]
-if "user_activity_log" not in st.session_state:
-    st.session_state.user_activity_log = []
 
-# Activity Logger Helper Function
+# Persistent Student Database Initialization
+if "student_db" not in st.session_state:
+    st.session_state.student_db = load_json_data(STUDENT_DB_FILE, {
+        "harshita@student.com": {"password": "123", "name": "Harshita Gadde"}
+    })
+
+# Persistent Activity Log Database Initialization
+if "user_activity_log" not in st.session_state:
+    st.session_state.user_activity_log = load_json_data(ACTIVITY_LOG_FILE, [])
+
+# Local IST (+5:30) Activity Logger Helper
 def log_activity(user_name, user_email, action, details=""):
-    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    st.session_state.user_activity_log.insert(0, {
+    utc_now = datetime.datetime.now(datetime.timezone.utc)
+    ist_now = utc_now + datetime.timedelta(hours=5, minutes=30)
+    timestamp = ist_now.strftime("%Y-%m-%d %I:%M:%S %p IST")
+    
+    log_entry = {
         "Timestamp": timestamp,
         "Student Name": user_name,
         "Email": user_email,
         "Action Performed": action,
         "Details": details
-    })
-
-# Student Accounts Database Simulation
-if "student_db" not in st.session_state:
-    st.session_state.student_db = {"harshita@student.com": {"password": "123", "name": "Harshita Gadde"}}
+    }
+    
+    st.session_state.user_activity_log.insert(0, log_entry)
+    save_json_data(ACTIVITY_LOG_FILE, st.session_state.user_activity_log)
 
 # Primary Admin Credentials
 if "admin_db" not in st.session_state:
@@ -70,10 +101,7 @@ if "user_role" not in st.session_state:
 # Adaptive CSS for Light, Dark, and System Themes
 st.markdown("""
     <style>
-    /* Responsive Containers using Native Theme CSS Variables */
-    .login-container {
-        padding-top: 10px;
-    }
+    .login-container { padding-top: 10px; }
     .login-title {
         font-size: 2.5rem !important;
         font-weight: 800 !important;
@@ -87,23 +115,17 @@ st.markdown("""
         margin-bottom: 20px !important;
         font-weight: 500;
     }
-
-    /* Standardize Text Contrast across Themes */
     .stMarkdown, p, span, label, div[data-testid="stWidgetLabel"] {
         color: var(--text-color) !important;
         font-size: 1rem !important;
         font-weight: 600 !important;
     }
-
-    /* Input Fields & Text Area Compatibility */
     .stTextInput input, .stTextArea textarea, div[data-baseweb="select"] {
         background-color: var(--secondary-background-color) !important;
         color: var(--text-color) !important;
         border: 1px solid rgba(128, 128, 128, 0.3) !important;
         border-radius: 8px !important;
     }
-    
-    /* Radio Options Styling */
     div[data-testid="stRadio"] > div {
         background-color: var(--secondary-background-color);
         padding: 8px 12px;
@@ -115,8 +137,6 @@ st.markdown("""
         color: var(--text-color) !important;
         font-weight: 700 !important;
     }
-
-    /* Right Purple Hero Card */
     .purple-hero-card {
         background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
         padding: 35px;
@@ -129,22 +149,14 @@ st.markdown("""
         flex-direction: column;
         justify-content: space-between;
     }
-    .purple-hero-card * {
-        color: #ffffff !important;
-    }
+    .purple-hero-card * { color: #ffffff !important; }
     .purple-hero-title {
         font-size: 2.8rem !important;
         font-weight: 900 !important;
         line-height: 1.1;
         margin-bottom: 12px;
     }
-    .purple-hero-sub {
-        opacity: 0.9;
-        font-size: 1.1rem !important;
-        margin-bottom: 20px;
-    }
-
-    /* Buttons Override */
+    .purple-hero-sub { opacity: 0.9; font-size: 1.1rem !important; margin-bottom: 20px; }
     div.stButton > button {
         background-color: #9333ea !important;
         color: #ffffff !important;
@@ -154,14 +166,8 @@ st.markdown("""
         border: none !important;
         padding: 0.6rem 1rem !important;
     }
-    div.stButton > button * {
-        color: #ffffff !important;
-    }
-    div.stButton > button:hover {
-        background-color: #7e22ce !important;
-    }
-
-    /* Dashboard Cards */
+    div.stButton > button * { color: #ffffff !important; }
+    div.stButton > button:hover { background-color: #7e22ce !important; }
     .welcome-card {
         background: var(--secondary-background-color);
         padding: 20px; 
@@ -171,7 +177,6 @@ st.markdown("""
     }
     .welcome-title { font-size: 2rem !important; font-weight: 800 !important; color: var(--text-color) !important; }
     .welcome-subtitle { color: var(--text-color) !important; opacity: 0.85; font-size: 1rem !important; }
-    
     .dashboard-card {
         background-color: var(--secondary-background-color); 
         padding: 14px; 
@@ -182,15 +187,12 @@ st.markdown("""
     }
     .card-title { font-weight: 800; color: var(--text-color); font-size: 1rem; }
     .card-subtext { color: #9333ea; font-weight: 700; font-size: 0.9rem; }
-    
     .workspace-container {
         background-color: var(--secondary-background-color); 
         padding: 20px; 
         border-radius: 14px;
         border: 1px solid rgba(128, 128, 128, 0.2); 
     }
-
-    /* Mobile Adaptations */
     @media (max-width: 768px) {
         .purple-hero-title { font-size: 2rem !important; }
         .login-title { font-size: 2rem !important; }
@@ -200,7 +202,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# API Query Function with Dynamic Model Detection and 503 Retry Logic
+# API Query Function with Dynamic Model Discovery & 503 Retry Logic
 def query_gemini(contents):
     api_key = None
     if "GEMINI_API_KEY" in st.secrets:
@@ -212,11 +214,8 @@ def query_gemini(contents):
         raise Exception("API Key missing! Please add GEMINI_API_KEY in Streamlit Cloud Secrets.")
     
     client = genai.Client(api_key=api_key)
-    
-    # Target active model priority list
     candidate_models = ['gemini-3.6-flash']
     
-    # Fetch active endpoints dynamically to prevent 404 errors
     try:
         available_models = [m.name.replace('models/', '') for m in client.models.list() if 'generateContent' in m.supported_generation_methods]
         for m in available_models:
@@ -311,6 +310,7 @@ if st.session_state.logged_in_user is None:
                 if st.button("Sign up", use_container_width=True):
                     if reg_name and reg_email and reg_pass:
                         st.session_state.student_db[reg_email] = {"password": reg_pass, "name": reg_name}
+                        save_json_data(STUDENT_DB_FILE, st.session_state.student_db)
                         log_activity(reg_name, reg_email, "Account Registration", "New student account created")
                         st.success("Student account created successfully! Switch to 'Sign In'.")
                     else:
@@ -462,7 +462,6 @@ elif st.session_state.user_role == "Student":
                                     image_input = Image.open(io.BytesIO(file_bytes_payload))
                                     contents = [image_input, instruction]
                                 elif ext == "pdf" and not extracted_text.strip():
-                                    # Properly wrap raw PDF bytes using types.Part.from_bytes
                                     pdf_part = types.Part.from_bytes(
                                         data=file_bytes_payload,
                                         mime_type="application/pdf"
