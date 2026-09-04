@@ -199,14 +199,22 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# API Query Function using Google GenAI SDK
+# API Query Function using Google GenAI SDK with Updated 2026 Models
 def query_gemini(contents):
-    api_key = os.getenv("GEMINI_API_KEY")
+    # Retrieve API key from Streamlit Secrets or Environment Variable
+    api_key = None
+    if "GEMINI_API_KEY" in st.secrets:
+        api_key = st.secrets["GEMINI_API_KEY"]
+    else:
+        api_key = os.getenv("GEMINI_API_KEY")
+        
     if not api_key:
-        raise Exception("API Key missing! Ensure GEMINI_API_KEY is configured in your Streamlit secrets.")
+        raise Exception("API Key missing! Please add GEMINI_API_KEY in Streamlit Cloud Secrets.")
     
     client = genai.Client(api_key=api_key)
-    candidate_models = ['gemini-1.5-flash', 'gemini-1.5-pro']
+    
+    # Valid model endpoints for google-genai SDK
+    candidate_models = ['gemini-2.5-flash', 'gemini-2.5-pro']
     
     last_err = None
     for model_name in candidate_models:
@@ -221,7 +229,6 @@ def query_gemini(contents):
             continue
             
     raise Exception(f"Gemini API Error: {str(last_err)}")
-
 # ---------------------------------------------------------
 # SIDEBAR NAVIGATION
 # ---------------------------------------------------------
