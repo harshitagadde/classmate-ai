@@ -66,75 +66,56 @@ if "logged_in_user" not in st.session_state:
 if "user_role" not in st.session_state:
     st.session_state.user_role = "Student"
 
-# Custom Responsive CSS Styling
+# Adaptive CSS for Light, Dark, and System Themes
 st.markdown("""
     <style>
-    /* Global App Dark Theme */
-    .stApp { 
-        background-color: #0f1013 !important; 
-        color: #f8fafc !important; 
-    }
-    section[data-testid="stSidebar"] { 
-        background-color: #18191c !important; 
-        border-right: 1px solid #2e3138 !important; 
-    }
-    
-    /* Login Form Styling */
+    /* Responsive Containers using Native Theme CSS Variables */
     .login-container {
         padding-top: 10px;
     }
     .login-title {
         font-size: 2.5rem !important;
         font-weight: 800 !important;
-        color: #ffffff !important;
+        color: var(--text-color) !important;
         margin-bottom: 2px !important;
     }
     .login-sub {
-        color: #cbd5e1 !important;
+        color: var(--text-color) !important;
+        opacity: 0.8;
         font-size: 1rem !important;
         margin-bottom: 20px !important;
         font-weight: 500;
     }
 
-    /* Labels & General Text Styling */
+    /* Standardize Text Contrast across Themes */
     .stMarkdown, p, span, label, div[data-testid="stWidgetLabel"] {
-        color: #f8fafc !important;
+        color: var(--text-color) !important;
         font-size: 1rem !important;
         font-weight: 600 !important;
     }
-    
-    /* Input Fields & Placeholder Text */
-    .stTextInput input, .stTextArea textarea {
-        background-color: #1e2025 !important;
-        border: 1.5px solid #3b3e45 !important;
+
+    /* Input Fields & Text Area Compatibility */
+    .stTextInput input, .stTextArea textarea, div[data-baseweb="select"] {
+        background-color: var(--secondary-background-color) !important;
+        color: var(--text-color) !important;
+        border: 1px solid rgba(128, 128, 128, 0.3) !important;
         border-radius: 8px !important;
-        color: #ffffff !important;
-        font-size: 1rem !important;
-        padding: 10px !important;
-    }
-    .stTextInput input::placeholder {
-        color: #94a3b8 !important;
-        opacity: 1 !important;
-    }
-    .stTextInput input:focus {
-        border-color: #a855f7 !important;
-        box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.3) !important;
     }
     
-    /* Radio Option Highlighting & Accent Color Fix */
+    /* Radio Options Styling */
     div[data-testid="stRadio"] > div {
-        background-color: #18191d;
+        background-color: var(--secondary-background-color);
         padding: 8px 12px;
         border-radius: 10px;
-        border: 1px solid #2d3037;
+        border: 1px solid rgba(128, 128, 128, 0.2);
         margin-bottom: 10px;
     }
     div[data-testid="stRadio"] label span {
-        color: #ffffff !important;
+        color: var(--text-color) !important;
         font-weight: 700 !important;
     }
 
-    /* Right Purple Hero Card Styling */
+    /* Right Purple Hero Card */
     .purple-hero-card {
         background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
         padding: 35px;
@@ -147,15 +128,17 @@ st.markdown("""
         flex-direction: column;
         justify-content: space-between;
     }
+    .purple-hero-card * {
+        color: #ffffff !important;
+    }
     .purple-hero-title {
         font-size: 2.8rem !important;
         font-weight: 900 !important;
-        color: #ffffff !important;
         line-height: 1.1;
         margin-bottom: 12px;
     }
     .purple-hero-sub {
-        color: #e9d5ff !important;
+        opacity: 0.9;
         font-size: 1.1rem !important;
         margin-bottom: 20px;
     }
@@ -169,42 +152,44 @@ st.markdown("""
         font-weight: 800 !important;
         border: none !important;
         padding: 0.6rem 1rem !important;
-        box-shadow: 0 4px 12px rgba(147, 51, 234, 0.4);
+    }
+    div.stButton > button * {
+        color: #ffffff !important;
     }
     div.stButton > button:hover {
         background-color: #7e22ce !important;
     }
 
-    /* Logged In Dashboard Styling */
+    /* Dashboard Cards */
     .welcome-card {
-        background: #18191c;
+        background: var(--secondary-background-color);
         padding: 20px; 
         border-radius: 14px; 
-        border: 1px solid #2e3138;
+        border: 1px solid rgba(128, 128, 128, 0.2);
         margin-bottom: 16px; 
     }
-    .welcome-title { font-size: 2rem !important; font-weight: 800 !important; color: #ffffff !important; }
-    .welcome-subtitle { color: #cbd5e1 !important; font-size: 1rem !important; }
+    .welcome-title { font-size: 2rem !important; font-weight: 800 !important; color: var(--text-color) !important; }
+    .welcome-subtitle { color: var(--text-color) !important; opacity: 0.85; font-size: 1rem !important; }
     
     .dashboard-card {
-        background-color: #18191c; 
+        background-color: var(--secondary-background-color); 
         padding: 14px; 
         border-radius: 12px;
-        border: 1px solid #2e3138; 
+        border: 1px solid rgba(128, 128, 128, 0.2); 
         text-align: center;
         margin-bottom: 10px;
     }
-    .card-title { font-weight: 800; color: #ffffff; font-size: 1rem; }
-    .card-subtext { color: #c084fc; font-weight: 700; font-size: 0.9rem; }
+    .card-title { font-weight: 800; color: var(--text-color); font-size: 1rem; }
+    .card-subtext { color: #9333ea; font-weight: 700; font-size: 0.9rem; }
     
     .workspace-container {
-        background-color: #18191c; 
+        background-color: var(--secondary-background-color); 
         padding: 20px; 
         border-radius: 14px;
-        border: 1px solid #2e3138; 
+        border: 1px solid rgba(128, 128, 128, 0.2); 
     }
 
-    /* Mobile Responsive Layout Fixes */
+    /* Mobile Adaptations */
     @media (max-width: 768px) {
         .purple-hero-title { font-size: 2rem !important; }
         .login-title { font-size: 2rem !important; }
@@ -214,14 +199,13 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# API Query Function using Gemini API
+# API Query Function using Google GenAI SDK
 def query_gemini(contents):
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
-        raise Exception("API Key missing! Ensure GEMINI_API_KEY is set in your Streamlit secrets.")
+        raise Exception("API Key missing! Ensure GEMINI_API_KEY is configured in your Streamlit secrets.")
     
     client = genai.Client(api_key=api_key)
-    # Updated active official model names
     candidate_models = ['gemini-1.5-flash', 'gemini-1.5-pro']
     
     last_err = None
@@ -271,7 +255,7 @@ if st.session_state.logged_in_user is None:
     
     col_login, col_hero = st.columns([0.9, 1.1], gap="large")
 
-    # Left Dark Login Form
+    # Left Login Form
     with col_login:
         st.markdown('<div class="login-container">', unsafe_allow_html=True)
         st.markdown('<div class="login-title">Login</div>', unsafe_allow_html=True)
