@@ -66,100 +66,89 @@ if "logged_in_user" not in st.session_state:
 if "user_role" not in st.session_state:
     st.session_state.user_role = "Student"
 
-# ---------------------------------------------------------
-# DYNAMIC ADAPTIVE CSS FOR BOTH LIGHT & DARK THEMES
-# ---------------------------------------------------------
+# Custom Responsive CSS Styling
 st.markdown("""
     <style>
-    /* Global App Adaptive Background & Text */
+    /* Global App Dark Theme */
     .stApp { 
-        background-color: var(--background-color) !important; 
-        color: var(--text-color) !important; 
+        background-color: #0f1013 !important; 
+        color: #f8fafc !important; 
     }
-    
     section[data-testid="stSidebar"] { 
-        background-color: var(--secondary-background-color) !important; 
-        border-right: 1px solid rgba(128, 128, 128, 0.2) !important; 
+        background-color: #18191c !important; 
+        border-right: 1px solid #2e3138 !important; 
     }
     
-    /* Login Form Container */
+    /* Login Form Styling */
     .login-container {
         padding-top: 10px;
     }
     .login-title {
-        font-size: 3rem !important;
+        font-size: 2.5rem !important;
         font-weight: 800 !important;
-        color: var(--text-color) !important;
+        color: #ffffff !important;
         margin-bottom: 2px !important;
     }
     .login-sub {
-        color: var(--text-color) !important;
-        opacity: 0.8;
-        font-size: 1.1rem !important;
+        color: #cbd5e1 !important;
+        font-size: 1rem !important;
         margin-bottom: 20px !important;
         font-weight: 500;
     }
 
-    /* Force all text elements, labels, and markdown to follow active theme color */
-    .stMarkdown, p, span, label, div[data-testid="stWidgetLabel"], h1, h2, h3, h4, h5, h6 {
-        color: var(--text-color) !important;
+    /* Labels & General Text Styling */
+    .stMarkdown, p, span, label, div[data-testid="stWidgetLabel"] {
+        color: #f8fafc !important;
+        font-size: 1rem !important;
         font-weight: 600 !important;
     }
     
-    /* Input Fields & Text Areas Adaptive Theme */
+    /* Input Fields & Placeholder Text */
     .stTextInput input, .stTextArea textarea {
-        background-color: var(--secondary-background-color) !important;
-        border: 1.5px solid rgba(128, 128, 128, 0.3) !important;
+        background-color: #1e2025 !important;
+        border: 1.5px solid #3b3e45 !important;
         border-radius: 8px !important;
-        color: var(--text-color) !important;
-        font-size: 1.05rem !important;
+        color: #ffffff !important;
+        font-size: 1rem !important;
         padding: 10px !important;
     }
-    .stTextInput input::placeholder, .stTextArea textarea::placeholder {
-        color: var(--text-color) !important;
-        opacity: 0.6 !important;
+    .stTextInput input::placeholder {
+        color: #94a3b8 !important;
+        opacity: 1 !important;
     }
-    .stTextInput input:focus, .stTextArea textarea:focus {
-        border-color: #9333ea !important;
-        box-shadow: 0 0 0 2px rgba(147, 51, 234, 0.3) !important;
-    }
-
-    /* Selectbox Dropdowns Visibility Fix */
-    div[data-baseweb="select"] > div {
-        background-color: var(--secondary-background-color) !important;
-        color: var(--text-color) !important;
-        border: 1.5px solid rgba(128, 128, 128, 0.3) !important;
-        border-radius: 8px !important;
+    .stTextInput input:focus {
+        border-color: #a855f7 !important;
+        box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.3) !important;
     }
     
-    /* Radio Option Buttons Container */
+    /* Radio Option Highlighting & Accent Color Fix */
     div[data-testid="stRadio"] > div {
-        background-color: var(--secondary-background-color) !important;
+        background-color: #18191d;
         padding: 8px 12px;
         border-radius: 10px;
-        border: 1px solid rgba(128, 128, 128, 0.2) !important;
+        border: 1px solid #2d3037;
         margin-bottom: 10px;
     }
     div[data-testid="stRadio"] label span {
-        color: var(--text-color) !important;
+        color: #ffffff !important;
         font-weight: 700 !important;
     }
 
-    /* Right Purple Hero Card (Vibrant Accent in Both Themes) */
+    /* Right Purple Hero Card Styling */
     .purple-hero-card {
-        background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%) !important;
-        padding: 45px;
-        border-radius: 28px;
+        background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
+        padding: 35px;
+        border-radius: 24px;
         color: #ffffff !important;
-        box-shadow: 0 20px 40px rgba(124, 58, 237, 0.3);
+        box-shadow: 0 15px 30px rgba(124, 58, 237, 0.3);
         height: 100%;
-        min-height: 480px;
+        min-height: 400px;
         display: flex;
         flex-direction: column;
         justify-content: space-between;
     }
     .purple-hero-title {
-        font-size: 3.5rem !important;
+        font-size: 2.8rem !important;
         font-weight: 900 !important;
         color: #ffffff !important;
         line-height: 1.1;
@@ -167,7 +156,7 @@ st.markdown("""
     }
     .purple-hero-sub {
         color: #e9d5ff !important;
-        font-size: 1.25rem !important;
+        font-size: 1.1rem !important;
         margin-bottom: 20px;
     }
 
@@ -176,50 +165,64 @@ st.markdown("""
         background-color: #9333ea !important;
         color: #ffffff !important;
         border-radius: 10px !important;
-        font-size: 1.1rem !important;
+        font-size: 1rem !important;
         font-weight: 800 !important;
         border: none !important;
-        padding: 0.7rem 1.2rem !important;
+        padding: 0.6rem 1rem !important;
         box-shadow: 0 4px 12px rgba(147, 51, 234, 0.4);
     }
     div.stButton > button:hover {
         background-color: #7e22ce !important;
     }
 
-    /* Logged In Workspace & Dashboard Cards */
-    .welcome-card, .dashboard-card, .workspace-container {
-        background-color: var(--secondary-background-color) !important;
-        border: 1px solid rgba(128, 128, 128, 0.2) !important;
-        padding: 22px; 
+    /* Logged In Dashboard Styling */
+    .welcome-card {
+        background: #18191c;
+        padding: 20px; 
         border-radius: 14px; 
+        border: 1px solid #2e3138;
         margin-bottom: 16px; 
     }
-    .welcome-title, .card-title { 
-        font-size: 2.2rem !important; 
-        font-weight: 800 !important; 
-        color: var(--text-color) !important; 
+    .welcome-title { font-size: 2rem !important; font-weight: 800 !important; color: #ffffff !important; }
+    .welcome-subtitle { color: #cbd5e1 !important; font-size: 1rem !important; }
+    
+    .dashboard-card {
+        background-color: #18191c; 
+        padding: 14px; 
+        border-radius: 12px;
+        border: 1px solid #2e3138; 
+        text-align: center;
+        margin-bottom: 10px;
     }
-    .welcome-subtitle { 
-        color: var(--text-color) !important; 
-        opacity: 0.8;
-        font-size: 1.05rem !important; 
+    .card-title { font-weight: 800; color: #ffffff; font-size: 1rem; }
+    .card-subtext { color: #c084fc; font-weight: 700; font-size: 0.9rem; }
+    
+    .workspace-container {
+        background-color: #18191c; 
+        padding: 20px; 
+        border-radius: 14px;
+        border: 1px solid #2e3138; 
     }
-    .card-subtext { 
-        color: #9333ea !important; 
-        font-weight: 700 !important; 
-        font-size: 0.95rem; 
+
+    /* Mobile Responsive Layout Fixes */
+    @media (max-width: 768px) {
+        .purple-hero-title { font-size: 2rem !important; }
+        .login-title { font-size: 2rem !important; }
+        .welcome-title { font-size: 1.5rem !important; }
+        div[data-testid="column"] { width: 100% !important; margin-bottom: 10px; }
     }
     </style>
 """, unsafe_allow_html=True)
 
-# API Query Function using Gemini 3.6 Flash
+# API Query Function using Gemini API
 def query_gemini(contents):
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
-        raise Exception("API Key missing! Ensure GEMINI_API_KEY is set in your .env file.")
+        raise Exception("API Key missing! Ensure GEMINI_API_KEY is set in your Streamlit secrets.")
     
     client = genai.Client(api_key=api_key)
-    candidate_models = ['gemini-3.6-flash', 'gemini-2.5-flash']
+    # Updated active official model names
+    candidate_models = ['gemini-1.5-flash', 'gemini-1.5-pro']
     
     last_err = None
     for model_name in candidate_models:
@@ -245,9 +248,10 @@ with st.sidebar:
 
     if st.session_state.logged_in_user is not None:
         user_info = st.session_state.logged_in_user
-        st.success(f"Logged in: **{user_info['name']}** ({st.session_state.user_role})")
-        if st.button("Sign Out"):
-            log_activity(user_info['name'], st.session_state.logged_in_email, "User Sign Out", "User signed out of portal")
+        clean_name = user_info['name'].strip()
+        st.success(f"Logged in: **{clean_name}** ({st.session_state.user_role})")
+        if st.button("Sign Out", use_container_width=True):
+            log_activity(clean_name, st.session_state.logged_in_email, "User Sign Out", "User signed out of portal")
             st.session_state.logged_in_user = None
             st.session_state.logged_in_email = None
             st.rerun()
@@ -267,7 +271,7 @@ if st.session_state.logged_in_user is None:
     
     col_login, col_hero = st.columns([0.9, 1.1], gap="large")
 
-    # Left Form Column
+    # Left Dark Login Form
     with col_login:
         st.markdown('<div class="login-container">', unsafe_allow_html=True)
         st.markdown('<div class="login-title">Login</div>', unsafe_allow_html=True)
@@ -283,7 +287,7 @@ if st.session_state.logged_in_user is None:
                 login_pass = st.text_input("Password:", type="password")
                 
                 st.write("")
-                if st.button("Login"):
+                if st.button("Login", use_container_width=True):
                     if login_email in st.session_state.student_db and st.session_state.student_db[login_email]["password"] == login_pass:
                         st.session_state.logged_in_user = st.session_state.student_db[login_email]
                         st.session_state.logged_in_email = login_email
@@ -298,7 +302,7 @@ if st.session_state.logged_in_user is None:
                 reg_pass = st.text_input("Register Password:", type="password")
                 
                 st.write("")
-                if st.button("Sign up"):
+                if st.button("Sign up", use_container_width=True):
                     if reg_name and reg_email and reg_pass:
                         st.session_state.student_db[reg_email] = {"password": reg_pass, "name": reg_name}
                         log_activity(reg_name, reg_email, "Account Registration", "New student account created")
@@ -312,7 +316,7 @@ if st.session_state.logged_in_user is None:
             admin_pass = st.text_input("Admin Password:", type="password")
             
             st.write("")
-            if st.button("Login to Admin Console"):
+            if st.button("Login to Admin Console", use_container_width=True):
                 if admin_email in st.session_state.admin_db and st.session_state.admin_db[admin_email]["password"] == admin_pass:
                     st.session_state.logged_in_user = st.session_state.admin_db[admin_email]
                     st.session_state.logged_in_email = admin_email
@@ -332,8 +336,8 @@ if st.session_state.logged_in_user is None:
                     <div class="purple-hero-title">Welcome to<br>Classmate AI</div>
                     <div class="purple-hero-sub">Login to access your personalized learning workspace</div>
                 </div>
-                <div style="text-align: center; margin-top: 20px;">
-                    <svg width="260" height="200" viewBox="0 0 200 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <div style="text-align: center; margin-top: 15px;">
+                    <svg width="220" height="170" viewBox="0 0 200 160" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M40 120 C40 80, 160 80, 160 120 Z" fill="#6d28d9" opacity="0.4"/>
                         <rect x="50" y="40" width="100" height="70" rx="8" fill="#ffffff" stroke="#1e2025" stroke-width="3"/>
                         <line x1="65" y1="58" x2="115" y2="58" stroke="#7c3aed" stroke-width="4" stroke-linecap="round"/>
@@ -350,7 +354,7 @@ if st.session_state.logged_in_user is None:
 # VIEW 1: STUDENT DASHBOARD
 # ---------------------------------------------------------
 elif st.session_state.user_role == "Student":
-    user_name = st.session_state.logged_in_user["name"]
+    user_name = st.session_state.logged_in_user["name"].strip()
     user_email = st.session_state.logged_in_email
     elapsed_minutes = int((time.time() - st.session_state.start_time) / 60)
 
@@ -363,13 +367,13 @@ elif st.session_state.user_role == "Student":
 
     col_a, col_b, col_c, col_d = st.columns(4)
     with col_a:
-        st.markdown(f'<div class="dashboard-card"><div class="card-title">⏱️ Active Study Time</div><div class="card-subtext">{elapsed_minutes} Minutes</div></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="dashboard-card">⏱️ <div class="card-title">Active Study Time</div><div class="card-subtext">{elapsed_minutes} Minutes</div></div>', unsafe_allow_html=True)
     with col_b:
-        st.markdown(f'<div class="dashboard-card"><div class="card-title">📝 Notes Summarized</div><div class="card-subtext">{st.session_state.notes_processed} Processed</div></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="dashboard-card">📝 <div class="card-title">Notes Summarized</div><div class="card-subtext">{st.session_state.notes_processed} Processed</div></div>', unsafe_allow_html=True)
     with col_c:
-        st.markdown(f'<div class="dashboard-card"><div class="card-title">❓ Quizzes Generated</div><div class="card-subtext">{st.session_state.quizzes_generated} Sets</div></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="dashboard-card">❓ <div class="card-title">Quizzes Generated</div><div class="card-subtext">{st.session_state.quizzes_generated} Sets</div></div>', unsafe_allow_html=True)
     with col_d:
-        st.markdown(f'<div class="dashboard-card"><div class="card-title">📅 Exams Scheduled</div><div class="card-subtext">{len(st.session_state.exam_schedule)} Scheduled</div></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="dashboard-card">📅 <div class="card-title">Exams Scheduled</div><div class="card-subtext">{len(st.session_state.exam_schedule)} Scheduled</div></div>', unsafe_allow_html=True)
 
     st.write("")
 
@@ -420,7 +424,7 @@ elif st.session_state.user_role == "Student":
                     except Exception as e:
                         st.error(f"Error parsing file: {str(e)}")
 
-            generate_btn = st.button("🚀 Process with AI")
+            generate_btn = st.button("🚀 Process with AI", use_container_width=True)
             st.markdown('</div>', unsafe_allow_html=True)
 
         with col2:
@@ -463,7 +467,7 @@ elif st.session_state.user_role == "Student":
             st.markdown('<div class="workspace-container">', unsafe_allow_html=True)
             st.markdown("### ➕ Add New Task")
             new_task = st.text_input("Enter study goal or topic:", placeholder="e.g. Read Physics Chapter 3")
-            if st.button("Add to Study Plan"):
+            if st.button("Add to Study Plan", use_container_width=True):
                 if new_task.strip():
                     st.session_state.todo_list.append({"task": new_task, "done": False})
                     log_activity(user_name, user_email, "Added Study Plan Task", f"Task: {new_task}")
@@ -530,7 +534,7 @@ elif st.session_state.user_role == "Student":
             new_subject = st.text_input("Exam Name:", placeholder="e.g. Physics Midterm")
             new_date = st.date_input("Exam Date:")
             
-            if st.button("Save Exam"):
+            if st.button("Save Exam", use_container_width=True):
                 if new_subject.strip():
                     st.session_state.exam_schedule.append({"subject": new_subject, "date": str(new_date)})
                     log_activity(user_name, user_email, "Added Scheduled Exam", f"Exam: {new_subject} on {new_date}")
@@ -570,7 +574,7 @@ elif st.session_state.user_role == "Student":
 # VIEW 2: ADMIN DASHBOARD
 # ---------------------------------------------------------
 else:
-    admin_name = st.session_state.logged_in_user["name"]
+    admin_name = st.session_state.logged_in_user["name"].strip()
 
     st.markdown(f"""
         <div class="welcome-card">
@@ -594,18 +598,18 @@ else:
             for email, info in list(st.session_state.student_db.items()):
                 col_u1, col_u2 = st.columns([3, 1])
                 with col_u1:
-                    st.write(f"👤 **{info['name']}** (`{email}`)")
+                    st.write(f"👤 **{info['name'].strip()}** (`{email}`)")
                 with col_u2:
                     is_admin = email in st.session_state.admin_db
                     if is_admin:
                         st.success("Admin Access Granted")
                     else:
-                        if st.button(f"Grant Admin Access", key=f"grant_{email}"):
+                        if st.button(f"Grant Admin Access", key=f"grant_{email}", use_container_width=True):
                             st.session_state.admin_db[email] = {
                                 "password": info["password"],
-                                "name": f"{info['name']} (Admin)"
+                                "name": f"{info['name'].strip()} (Admin)"
                             }
-                            st.success(f"Granted Admin privileges to {info['name']}!")
+                            st.success(f"Granted Admin privileges to {info['name'].strip()}!")
                             st.rerun()
         else:
             st.info("No registered student accounts yet.")
@@ -635,7 +639,7 @@ else:
                 col_e1, col_e2 = st.columns([3, 1])
                 with col_e1: st.write(f"**{idx+1}. {item['subject']}** (`{item['date']}`)")
                 with col_e2:
-                    if st.button(f"Delete #{idx+1}", key=f"del_{idx}"):
+                    if st.button(f"Delete #{idx+1}", key=f"del_{idx}", use_container_width=True):
                         st.session_state.exam_schedule.pop(idx)
                         st.rerun()
         else:
