@@ -199,7 +199,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# API Query Function with Auto-Model Discovery and 503 Retry Logic
+# API Query Function with Dynamic Model Detection and 503 Retry Logic
 def query_gemini(contents):
     api_key = None
     if "GEMINI_API_KEY" in st.secrets:
@@ -212,9 +212,10 @@ def query_gemini(contents):
     
     client = genai.Client(api_key=api_key)
     
-    # Priority list for stable execution
+    # Target active model priority list
     candidate_models = ['gemini-3.6-flash']
     
+    # Fetch active endpoints dynamically to prevent 404 errors
     try:
         available_models = [m.name.replace('models/', '') for m in client.models.list() if 'generateContent' in m.supported_generation_methods]
         for m in available_models:
@@ -225,7 +226,6 @@ def query_gemini(contents):
 
     last_err = None
     for model_name in candidate_models:
-        # Retry up to 3 times per model if a 503 error occurs
         for attempt in range(3):
             try:
                 response = client.models.generate_content(
@@ -235,14 +235,14 @@ def query_gemini(contents):
                 return response.text
             except Exception as e:
                 last_err = e
-                # If server is overloaded (503), wait 2 seconds and retry
                 if "503" in str(e) or "UNAVAILABLE" in str(e):
                     time.sleep(2)
                     continue
                 else:
-                    break  # Try next model for non-503 errors
+                    break
             
     raise Exception(f"Gemini API Error: {str(last_err)}")
+
 # ---------------------------------------------------------
 # SIDEBAR NAVIGATION
 # ---------------------------------------------------------
@@ -398,12 +398,14 @@ elif st.session_state.user_role == "Student":
             input_mode = st.radio("Input Method:", ["Paste Text", "Upload Document/Image"])
             extracted_text = ""
             uploaded_file = None
+            file_bytes_payload = None
 
             if input_mode == "Paste Text":
                 extracted_text = st.text_area("Enter study material or notes:", height=180, placeholder="Paste study notes or text on any topic...")
             else:
                 uploaded_file = st.file_uploader("Upload File (PDF, PPT, Excel, Image):", type=["pdf", "pptx", "xlsx", "xls", "csv", "png", "jpg", "jpeg", "txt"])
                 if uploaded_file is not None:
+                    file_bytes_payload = uploaded_file.getvalue()
                     file_type = uploaded_file.name.split(".")[-1].lower()
                     try:
                         if file_type == "pdf":
@@ -423,7 +425,6 @@ elif st.session_state.user_role == "Student":
                             extracted_text = uploaded_file.read().decode("utf-8")
                         elif file_type in ["png", "jpg", "jpeg"]:
                             st.image(uploaded_file, caption="Uploaded Image", use_container_width=True)
-                            image_input = Image.open(uploaded_file)
                             
                         st.success(f"Parsed: {uploaded_file.name}")
                     except Exception as e:
@@ -443,18 +444,30 @@ elif st.session_state.user_role == "Student":
                     st.warning("⚠️ Please upload a file first!")
                 else:
                     if feature == "Summarize Notes":
-                        prompt = f"Summarize the following study text into clear, structured bullet points with headers:\n\n{extracted_text}"
+                        instruction = "Summarize the following study material into clear, structured bullet points with headers:"
                         st.session_state.notes_processed += 1
                     elif feature == "Generate Practice Quiz":
-                        prompt = f"Create 3 practice multiple-choice questions (A-D) with correct answers and explanations based on this study text:\n\n{extracted_text}"
+                        instruction = "Create 3 practice multiple-choice questions (A-D) with correct answers and explanations based on this study material:"
                         st.session_state.quizzes_generated += 1
                     else:
-                        prompt = f"Explain the main concepts in this text in simple terms with examples:\n\n{extracted_text}"
+                        instruction = "Explain the main concepts in this study material in simple terms with examples:"
                         st.session_state.concepts_explained += 1
 
                     try:
                         with st.spinner("Classmate AI processing..."):
-                            contents = [image_input, prompt] if (input_mode == "Upload Document/Image" and uploaded_file.name.split(".")[-1].lower() in ["png", "jpg", "jpeg"]) else prompt
+                            if input_mode == "Upload Document/Image":
+                                ext = uploaded_file.name.split(".")[-1].lower()
+                                if ext in ["png", "jpg", "jpeg"]:
+                                    image_input = Image.open(io.BytesIO(file_bytes_payload))
+                                    contents = [image_input, instruction]
+                                elif ext == "pdf" and not extracted_text.strip():
+                                    pdf_part = {"mime_type": "application/pdf", "data": file_bytes_payload}
+                                    contents = [pdf_part, instruction]
+                                else:
+                                    contents = f"{instruction}\n\n{extracted_text}"
+                            else:
+                                contents = f"{instruction}\n\n{extracted_text}"
+
                             res = query_gemini(contents)
                             st.markdown(res)
                             log_activity(user_name, user_email, f"Used AI Assistant: {feature}", f"Mode: {input_mode}")
