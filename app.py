@@ -199,7 +199,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# API Query Function using Google GenAI SDK with Updated Fallback Strategy
+# API Query Function with Auto Model Detection
 def query_gemini(contents):
     # Retrieve API key from Streamlit Secrets or Environment Variable
     api_key = None
@@ -213,9 +213,18 @@ def query_gemini(contents):
     
     client = genai.Client(api_key=api_key)
     
-    # Active Gemini SDK model endpoints
-    candidate_models = ['gemini-2.5-flash', 'gemini-2.0-flash']
+    # 1. Hardcoded priority target from your latest error message
+    candidate_models = ['gemini-3.6-flash']
     
+    # 2. Dynamically fetch available models from Google API to prevent 404 errors
+    try:
+        available_models = [m.name.replace('models/', '') for m in client.models.list() if 'generateContent' in m.supported_generation_methods]
+        for m in available_models:
+            if m not in candidate_models:
+                candidate_models.append(m)
+    except Exception:
+        pass
+
     last_err = None
     for model_name in candidate_models:
         try:
