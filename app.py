@@ -199,7 +199,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# API Query Function using Google GenAI SDK with Active Models
+# API Query Function with Free-Tier Quota Optimization
 def query_gemini(contents):
     # Retrieve API key from Streamlit Secrets or Environment Variable
     api_key = None
@@ -213,8 +213,8 @@ def query_gemini(contents):
     
     client = genai.Client(api_key=api_key)
     
-    # Active Gemini API model strings
-    candidate_models = ['gemini-3.6-flash', 'gemini-3.1-pro-preview']
+    # Priority on Flash models to prevent 429 Quota Exhaustion errors
+    candidate_models = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.5-pro']
     
     last_err = None
     for model_name in candidate_models:
