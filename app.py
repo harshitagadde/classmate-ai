@@ -199,7 +199,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# API Query Function using Google GenAI SDK with Updated 2026 Models
+# API Query Function using Google GenAI SDK with Active Models
 def query_gemini(contents):
     # Retrieve API key from Streamlit Secrets or Environment Variable
     api_key = None
@@ -213,8 +213,8 @@ def query_gemini(contents):
     
     client = genai.Client(api_key=api_key)
     
-    # Valid model endpoints for google-genai SDK
-    candidate_models = ['gemini-2.5-flash', 'gemini-2.5-pro']
+    # Active Gemini API model strings
+    candidate_models = ['gemini-3.6-flash', 'gemini-3.1-pro-preview']
     
     last_err = None
     for model_name in candidate_models:
@@ -229,6 +229,7 @@ def query_gemini(contents):
             continue
             
     raise Exception(f"Gemini API Error: {str(last_err)}")
+
 # ---------------------------------------------------------
 # SIDEBAR NAVIGATION
 # ---------------------------------------------------------
