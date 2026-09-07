@@ -1,668 +1,576 @@
-import os
-import io
-import time
-import datetime
-import json
 import streamlit as st
-from dotenv import load_dotenv
-from google import genai
-from google.genai import types
-import pypdf
-from pptx import Presentation
-import pandas as pd
-from PIL import Image
+import streamlit.components.v1 as components
 
-# Load environment variables
-load_dotenv()
+# 1. Streamlit Page Configuration (Full Viewport, Dark Mode)
+st.set_page_config(
+    page_title="Fastshot — Describe an app. We'll build it.",
+    page_icon="⚡",
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
 
-# Page Setup
-st.set_page_config(page_title="Classmate AI", page_icon="📚", layout="wide")
-
-# Persistent File Storage Paths
-STUDENT_DB_FILE = "students.json"
-ACTIVITY_LOG_FILE = "activity_logs.json"
-
-def load_json_data(file_path, default_data):
-    if os.path.exists(file_path):
-        try:
-            with open(file_path, "r") as f:
-                return json.load(f)
-        except Exception:
-            return default_data
-    return default_data
-
-def save_json_data(file_path, data):
-    try:
-        with open(file_path, "w") as f:
-            json.dump(data, f, indent=4)
-    except Exception as e:
-        st.error(f"Error saving persistent data: {e}")
-
-# Track Session Metrics & Activity Logs Real-Time
-if "start_time" not in st.session_state:
-    st.session_state.start_time = time.time()
-if "notes_processed" not in st.session_state:
-    st.session_state.notes_processed = 0
-if "quizzes_generated" not in st.session_state:
-    st.session_state.quizzes_generated = 0
-if "concepts_explained" not in st.session_state:
-    st.session_state.concepts_explained = 0
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-if "exam_schedule" not in st.session_state:
-    st.session_state.exam_schedule = []
-if "todo_list" not in st.session_state:
-    st.session_state.todo_list = [
-        {"task": "Revise Chapter 1 Notes", "done": False},
-        {"task": "Solve Practice Quiz on Math", "done": True}
-    ]
-
-# Persistent Student Database Initialization
-if "student_db" not in st.session_state:
-    st.session_state.student_db = load_json_data(STUDENT_DB_FILE, {
-        "harshita@student.com": {"password": "123", "name": "Harshita Gadde"}
-    })
-
-# Persistent Activity Log Database Initialization
-if "user_activity_log" not in st.session_state:
-    st.session_state.user_activity_log = load_json_data(ACTIVITY_LOG_FILE, [])
-
-# Local IST (+5:30) Activity Logger Helper
-def log_activity(user_name, user_email, action, details=""):
-    utc_now = datetime.datetime.now(datetime.timezone.utc)
-    ist_now = utc_now + datetime.timedelta(hours=5, minutes=30)
-    timestamp = ist_now.strftime("%Y-%m-%d %I:%M:%S %p IST")
-    
-    log_entry = {
-        "Timestamp": timestamp,
-        "Student Name": user_name,
-        "Email": user_email,
-        "Action Performed": action,
-        "Details": details
-    }
-    
-    st.session_state.user_activity_log.insert(0, log_entry)
-    save_json_data(ACTIVITY_LOG_FILE, st.session_state.user_activity_log)
-
-# Primary Admin Credentials
-if "admin_db" not in st.session_state:
-    st.session_state.admin_db = {
-        "harshitagadde04@gmail.com": {
-            "password": "Honey@peppa2008",
-            "name": "Harshita Gadde (Primary Admin)"
-        }
-    }
-
-if "logged_in_user" not in st.session_state:
-    st.session_state.logged_in_user = None
-if "user_role" not in st.session_state:
-    st.session_state.user_role = "Student"
-
-# Adaptive CSS for Light, Dark, and System Themes
+# 2. Inject Custom CSS to remove default Streamlit spacing and chrome
 st.markdown("""
     <style>
-    .login-container { padding-top: 10px; }
-    .login-title {
-        font-size: 2.5rem !important;
-        font-weight: 800 !important;
-        color: var(--text-color) !important;
-        margin-bottom: 2px !important;
-    }
-    .login-sub {
-        color: var(--text-color) !important;
-        opacity: 0.8;
-        font-size: 1rem !important;
-        margin-bottom: 20px !important;
-        font-weight: 500;
-    }
-    .stMarkdown, p, span, label, div[data-testid="stWidgetLabel"] {
-        color: var(--text-color) !important;
-        font-size: 1rem !important;
-        font-weight: 600 !important;
-    }
-    .stTextInput input, .stTextArea textarea, div[data-baseweb="select"] {
-        background-color: var(--secondary-background-color) !important;
-        color: var(--text-color) !important;
-        border: 1px solid rgba(128, 128, 128, 0.3) !important;
-        border-radius: 8px !important;
-    }
-    div[data-testid="stRadio"] > div {
-        background-color: var(--secondary-background-color);
-        padding: 8px 12px;
-        border-radius: 10px;
-        border: 1px solid rgba(128, 128, 128, 0.2);
-        margin-bottom: 10px;
-    }
-    div[data-testid="stRadio"] label span {
-        color: var(--text-color) !important;
-        font-weight: 700 !important;
-    }
-    .purple-hero-card {
-        background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
-        padding: 35px;
-        border-radius: 24px;
-        color: #ffffff !important;
-        box-shadow: 0 15px 30px rgba(124, 58, 237, 0.3);
-        height: 100%;
-        min-height: 400px;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-    }
-    .purple-hero-card * { color: #ffffff !important; }
-    .purple-hero-title {
-        font-size: 2.8rem !important;
-        font-weight: 900 !important;
-        line-height: 1.1;
-        margin-bottom: 12px;
-    }
-    .purple-hero-sub { opacity: 0.9; font-size: 1.1rem !important; margin-bottom: 20px; }
-    div.stButton > button {
-        background-color: #9333ea !important;
-        color: #ffffff !important;
-        border-radius: 10px !important;
-        font-size: 1rem !important;
-        font-weight: 800 !important;
-        border: none !important;
-        padding: 0.6rem 1rem !important;
-    }
-    div.stButton > button * { color: #ffffff !important; }
-    div.stButton > button:hover { background-color: #7e22ce !important; }
-    .welcome-card {
-        background: var(--secondary-background-color);
-        padding: 20px; 
-        border-radius: 14px; 
-        border: 1px solid rgba(128, 128, 128, 0.2);
-        margin-bottom: 16px; 
-    }
-    .welcome-title { font-size: 2rem !important; font-weight: 800 !important; color: var(--text-color) !important; }
-    .welcome-subtitle { color: var(--text-color) !important; opacity: 0.85; font-size: 1rem !important; }
-    .dashboard-card {
-        background-color: var(--secondary-background-color); 
-        padding: 14px; 
-        border-radius: 12px;
-        border: 1px solid rgba(128, 128, 128, 0.2); 
-        text-align: center;
-        margin-bottom: 10px;
-    }
-    .card-title { font-weight: 800; color: var(--text-color); font-size: 1rem; }
-    .card-subtext { color: #9333ea; font-weight: 700; font-size: 0.9rem; }
-    .workspace-container {
-        background-color: var(--secondary-background-color); 
-        padding: 20px; 
-        border-radius: 14px;
-        border: 1px solid rgba(128, 128, 128, 0.2); 
-    }
-    @media (max-width: 768px) {
-        .purple-hero-title { font-size: 2rem !important; }
-        .login-title { font-size: 2rem !important; }
-        .welcome-title { font-size: 1.5rem !important; }
-        div[data-testid="column"] { width: 100% !important; margin-bottom: 10px; }
-    }
+        /* Hide Streamlit Header, Toolbar, and Footer */
+        header[data-testid="stHeader"] { display: none !important; }
+        footer { display: none !important; }
+        #MainMenu { visibility: hidden !important; }
+        
+        /* Reset padding and margin for full screen iframe execution */
+        .block-container {
+            padding: 0 !important;
+            margin: 0 !important;
+            max-width: 100% !important;
+        }
+        
+        iframe {
+            display: block;
+            width: 100vw !important;
+            height: 100vh !important;
+            border: none !important;
+        }
+        
+        body, html {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #0a0d12;
+        }
     </style>
 """, unsafe_allow_html=True)
 
-# API Query Function with Dynamic Model Discovery & 503 Retry Logic
-def query_gemini(contents):
-    api_key = None
-    if "GEMINI_API_KEY" in st.secrets:
-        api_key = st.secrets["GEMINI_API_KEY"]
-    else:
-        api_key = os.getenv("GEMINI_API_KEY")
+# 3. HTML / CSS / JS Payload
+HTML_HERO_PAYLOAD = """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Fastshot — Describe an app. We'll build it.</title>
+    <meta name="description" content="Fastshot turns a written description into a working app.">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    
+    <!-- Google Fonts Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,100..900&display=block" rel="stylesheet">
+
+    <script>
+        document.documentElement.classList.add('anim');
+    </script>
+
+    <style>
+        /* RESET */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        button, input, textarea { font: inherit; color: inherit; background: none; border: 0; }
+        img, svg { display: block; }
+        html, body { height: 100%; width: 100%; overflow: hidden; background: #0a0d12; }
+        body {
+            font-family: Inter, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-synthesis: none;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: geometricPrecision;
+            color: #ffffff;
+        }
+
+        :focus-visible { outline: 2px solid #F8B285; outline-offset: 3px; border-radius: 4px; }
+
+        /* CONSTANTS & DESKTOP UNITS */
+        :root {
+            --font-text: Inter, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --font-display: Inter, var(--font-text);
+            
+            /* Reference Unit Scaling from 1560x1008 */
+            --u: min(0.06410256vw, 0.12400794vh);
+            --vu: 0.09920635vh;
+            --inset-top: 41;
+            --inset-bottom: 106;
+
+            --w-regular: 400;
+            --w-display-wght: 410;
+            --w-medium: 500;
+            --w-semibold: 600;
+            --w-display: var(--w-display-wght);
+            --w-nav: 400;
+            --w-brand: 500;
+            --w-cta: 520;
+            --w-body: var(--w-regular);
+            --w-label: var(--w-medium);
+            --w-model: var(--w-regular);
+            --w-proof: 480;
+
+            --e-primary: cubic-bezier(.16,1,.3,1);
+            --e-soft: cubic-bezier(.22,1,.36,1);
+        }
+
+        @supports (height: 100dvh) {
+            :root {
+                --u: min(0.06410256vw, 0.12400794dvh);
+                --vu: 0.09920635dvh;
+            }
+        }
+
+        @media (min-width: 1561px) {
+            :root { --inset-top: 27; --inset-bottom: 74; }
+        }
+
+        /* STAGE & BACKGROUND VIDEO */
+        .stage { position: fixed; inset: 0; overflow: hidden; background: #0a0d12; }
+        .stage-video {
+            position: absolute; inset: 0; width: 100%; height: 100%;
+            object-fit: cover; z-index: 0; pointer-events: none;
+        }
+
+        /* FRAME & LAYOUT (DESKTOP DEFAULT) */
+        .frame {
+            position: absolute; inset: 0; z-index: 1;
+            display: flex; flex-direction: column;
+            padding: calc(var(--inset-top)*var(--vu)) calc(225*var(--u)) calc(var(--inset-bottom)*var(--vu));
+        }
+
+        /* NAV */
+        header.nav {
+            height: calc(43*var(--u));
+            display: flex; align-items: center; justify-content: space-between;
+            position: relative; width: 100%;
+        }
+
+        .brand {
+            display: flex; align-items: center; gap: calc(12*var(--u));
+            text-decoration: none; color: #fff;
+        }
+        .brand-mark {
+            width: calc(34*var(--u)); height: calc(34*var(--u));
+            border-radius: 50%; background: #9C86CE;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .brand-mark-inner {
+            width: calc(17.2*var(--u)); height: calc(17.2*var(--u));
+            border-radius: 50%; background: #FFFFFF;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .brand-mark-dot {
+            width: calc(7.4*var(--u)); height: calc(7.4*var(--u));
+            border-radius: 50%; background: #151519;
+        }
+        .brand-wordmark {
+            font-size: calc(18.49*var(--u)); font-weight: var(--w-brand);
+            letter-spacing: -0.0154em; transform: translateY(calc(1*var(--u)));
+            font-variation-settings: "opsz" 32;
+            text-shadow: 0 calc(1*var(--u)) calc(10*var(--u)) rgba(0,0,0,.30);
+        }
+
+        .links {
+            position: absolute; left: 50%; transform: translateX(-50%);
+            top: calc((50.5 - 41)*var(--u));
+            display: flex; gap: calc(50*var(--u));
+        }
+        .links a {
+            font-size: calc(21.69*var(--u)); font-weight: var(--w-nav);
+            letter-spacing: -0.0115em; line-height: 1.2; color: #ffffff;
+            text-decoration: none; text-shadow: 0 calc(1*var(--u)) calc(12*var(--u)) rgba(0,0,0,.32);
+            transition: opacity .18s ease;
+        }
+        .links a:hover { opacity: .72; }
+
+        .cta {
+            width: calc(140*var(--u)); height: calc(43*var(--u));
+            border-radius: calc(12*var(--u));
+            font-size: calc(15.70*var(--u)); font-weight: var(--w-cta);
+            letter-spacing: -0.0127em; color: #ffffff;
+            align-self: flex-start; margin-top: calc((42 - 41)*var(--u));
+            background: linear-gradient(180deg, #3d3d3f 0%, #1d1d20 100%);
+            box-shadow: inset 0 calc(1*var(--u)) 0 rgba(255,255,255,.10), 0 calc(2*var(--u)) calc(14*var(--u)) rgba(0,0,0,.28);
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; text-decoration: none;
+            transition: filter .18s ease, transform .1s ease;
+        }
+        .cta span { transform: translateY(calc(2*var(--u))); }
+        .cta:hover { filter: brightness(1.16); }
+        .cta:active { transform: translateY(1px); }
+
+        /* BURGER & MOBILE MENU */
+        #menu { display: none; }
+        .burger { display: none; }
+        .sheet { display: none; }
+
+        /* HERO MAIN */
+        main.hero {
+            flex: 1; display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            gap: calc(var(--hero-gap)*var(--vu));
+            padding-bottom: calc(4*var(--vu));
+        }
+
+        .h1 {
+            font-size: calc(36.25*var(--u)); font-weight: var(--w-display);
+            line-height: 1.10; letter-spacing: 0.0018em; color: #ffffff;
+            font-variation-settings: "opsz" 32;
+            text-shadow: 0 calc(2*var(--u)) calc(22*var(--u)) rgba(0,0,0,.30);
+            text-align: center;
+        }
+
+        /* COMPOSER CARD */
+        .card {
+            width: calc(708*var(--u)); height: calc(143*var(--u));
+            border-radius: calc(26*var(--u)); margin-right: calc(3*var(--u));
+            background: rgba(41,41,43,.955);
+            backdrop-filter: blur(calc(26*var(--u))) saturate(112%);
+            -webkit-backdrop-filter: blur(calc(26*var(--u))) saturate(112%);
+            box-shadow: inset 0 0 0 1px rgba(214,228,255,.14), 0 calc(22*var(--u)) calc(60*var(--u)) rgba(0,0,0,.30);
+            position: relative;
+        }
+
+        .ph {
+            position: absolute;
+            left: calc(27*var(--u)); top: calc(33*var(--u)); right: calc(24*var(--u));
+            color: #8B8C8E; font-size: calc(9.97*var(--u)); font-weight: 400;
+            line-height: 1.35; letter-spacing: 0.007em;
+            white-space: nowrap; overflow: hidden; pointer-events: none;
+        }
+
+        .tools {
+            position: absolute;
+            left: calc(19*var(--u)); top: calc(92*var(--u));
+            height: calc(30*var(--u));
+            right: calc(-1*var(--u));
+        }
+
+        .chips { display: flex; align-items: center; gap: calc(5.5*var(--u)); }
         
-    if not api_key:
-        raise Exception("API Key missing! Please add GEMINI_API_KEY in Streamlit Cloud Secrets.")
-    
-    client = genai.Client(api_key=api_key)
-    candidate_models = ['gemini-3.6-flash']
-    
-    try:
-        available_models = [m.name.replace('models/', '') for m in client.models.list() if 'generateContent' in m.supported_generation_methods]
-        for m in available_models:
-            if m not in candidate_models:
-                candidate_models.append(m)
-    except Exception:
-        pass
+        .chip {
+            height: calc(30*var(--u)); border-radius: calc(9*var(--u));
+            font-size: calc(9.0*var(--u)); font-weight: 500; color: #909093; line-height: 1;
+            background: linear-gradient(180deg, rgba(255,255,255,.088) 0%, rgba(255,255,255,.050) 45%, rgba(255,255,255,.038) 100%);
+            border: 1px solid rgba(255,255,255,.05);
+            display: inline-flex; align-items: center;
+            padding-left: calc(var(--pl)*var(--u)); padding-right: calc(12*var(--u));
+            cursor: pointer; transition: background .18s ease, color .18s ease;
+        }
+        .chip span { transform: translateY(calc(2*var(--u))); }
+        .chip svg {
+            fill: currentColor; margin-right: calc(var(--ig)*var(--u));
+        }
+        .chip:hover {
+            background: linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,.07));
+            color: #c8c8cb;
+        }
 
-    last_err = None
-    for model_name in candidate_models:
-        for attempt in range(3):
-            try:
-                response = client.models.generate_content(
-                    model=model_name,
-                    contents=contents
-                )
-                return response.text
-            except Exception as e:
-                last_err = e
-                if "503" in str(e) or "UNAVAILABLE" in str(e):
-                    time.sleep(2)
-                    continue
-                else:
-                    break
+        /* CRITICAL: COMPOSER RIGHT CLUSTER (DESKTOP ABSOLUTE COORDINATES) */
+        .right {
+            position: absolute; inset: 0; pointer-events: none;
+        }
+        .right > * { position: absolute; pointer-events: auto; }
+
+        .model {
+            left: calc(510.2*var(--u)); top: calc(15.5*var(--u));
+            font-size: calc(10.4*var(--u)); font-weight: 400; color: #98999C; line-height: 1;
+            display: inline-flex; align-items: center; gap: calc(6.2*var(--u));
+            cursor: pointer;
+        }
+        .model svg { width: calc(6.8*var(--u)); fill: #98999C; }
+
+        .attach {
+            left: calc(599.15*var(--u)); top: calc(10.14*var(--u));
+            color: #A9AAAD; cursor: pointer; display: block;
+            transition: color .18s ease;
+        }
+        .attach svg { width: calc(19.79*var(--u)); height: auto; }
+        .attach:hover { color: #ffffff; }
+
+        .send {
+            left: calc(640*var(--u)); top: calc(2*var(--u));
+            width: calc(35*var(--u)); height: calc(35*var(--u));
+            border-radius: 50%;
+            background: linear-gradient(163deg, #FBBC94 0%, #F49D70 46%, #E88654 100%);
+            box-shadow: 0 calc(3*var(--u)) calc(12*var(--u)) rgba(210,110,60,.34);
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: filter .18s ease, transform .1s ease;
+        }
+        .send svg { width: calc(11.66*var(--u)); fill: #ffffff; }
+        .send:hover { filter: brightness(1.07); }
+        .send:active { transform: scale(.95); }
+
+        /* FOOTER PROOF */
+        footer.proof {
+            flex: none; display: flex; flex-direction: column;
+            align-items: center; gap: calc(52.3*var(--vu));
+        }
+        .proof-by {
+            font-size: calc(14.01*var(--u)); font-weight: var(--w-proof);
+            letter-spacing: 0.0065em; color: rgba(255,255,255,.95);
+            font-variation-settings: "opsz" 32;
+            text-shadow: 0 calc(1*var(--u)) calc(12*var(--u)) rgba(0,0,0,.35);
+        }
+        .logos {
+            display: flex; align-items: center; gap: calc(62*var(--u));
+            filter: drop-shadow(0 calc(1*var(--u)) calc(10*var(--u)) rgba(0,0,0,.30));
+        }
+        .logos svg { fill: #ffffff; }
+
+        /* RESPONSIVE ARCHITECTURE 2: TABLET */
+        @media (min-width: 600px) and (max-width: 1180px) and (min-height: 600px) {
+            :root { --u: 1px; }
+            .frame {
+                padding: clamp(24px, 3.4vh, 44px) clamp(28px, 4.2vw, 60px) clamp(26px, 4.4vh, 56px);
+            }
+            .links { position: static; transform: none; gap: clamp(20px, 3vw, 40px); }
+            .links a { font-size: clamp(14px, 1.6vw, 20px); }
+            .cta { margin-top: 0; width: auto; padding: 0 18px; height: 38px; font-size: 14px; }
+            .h1 { font-size: clamp(27px, 4.3vw, 44px); line-height: 1.12; }
             
-    raise Exception(f"Gemini API Error: {str(last_err)}")
+            .card {
+                width: min(100%, clamp(516px, 74vw, 760px)); height: auto; margin-right: 0;
+                padding: clamp(15px, 1.9vw, 24px); border-radius: clamp(17px, 2.1vw, 26px);
+                display: flex; flex-direction: column; gap: clamp(20px, 3.2vh, 44px);
+            }
+            .ph {
+                position: static; white-space: normal; font-size: clamp(11px, 1.35vw, 14px); line-height: 1.4;
+            }
+            .tools {
+                position: static; height: auto; display: flex; flex-direction: row; flex-wrap: wrap;
+                align-items: center; justify-content: space-between; gap: clamp(10px, 1.4vw, 18px);
+            }
+            .chips { gap: clamp(6px, 0.85vw, 10px); }
+            .chip {
+                height: clamp(29px, 3.4vh, 34px); padding: 0 clamp(7px, 1vw, 13px);
+                font-size: clamp(9.6px, 1.12vw, 12.5px);
+            }
+            .right {
+                position: static; display: flex; align-items: center; margin-left: auto; gap: 0; pointer-events: auto;
+            }
+            .right > * { position: static; }
+            .model { font-size: clamp(9.8px, 1.12vw, 12.5px); }
+            .attach { margin-left: clamp(9px, 1.4vw, 20px); }
+            .attach svg { width: clamp(16px, 1.8vw, 20px); }
+            .send {
+                margin-left: clamp(9px, 1.3vw, 18px);
+                width: clamp(32px, 3.5vw, 38px); height: clamp(32px, 3.5vw, 38px);
+            }
+            footer.proof { gap: clamp(15px, 2.5vh, 30px); }
+        }
 
-# ---------------------------------------------------------
-# SIDEBAR NAVIGATION
-# ---------------------------------------------------------
-with st.sidebar:
-    st.markdown("# 📚 Classmate AI")
-    st.caption("Universal Learning & Admin Console")
-    st.divider()
+        /* RESPONSIVE ARCHITECTURE 3: COMPACT / PHONE */
+        @media (max-width: 599px), (max-height: 599px) and (max-width: 1180px) {
+            :root { --u: 1px; }
+            .frame {
+                padding: max(18px, env(safe-area-inset-top)) max(clamp(18px, 5.2vw, 40px), env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(clamp(18px, 5.2vw, 40px), env(safe-area-inset-left));
+            }
+            .links, header .cta { display: none; }
+            .burger {
+                display: flex; align-items: center; justify-content: center;
+                width: 38px; height: 38px; border-radius: 11px;
+                background: rgba(255,255,255,.10); border: 1px solid rgba(255,255,255,.14);
+                cursor: pointer;
+            }
+            .sheet {
+                display: grid; grid-template-rows: 0fr;
+                transition: grid-template-rows 0.32s cubic-bezier(.4,0,.2,1);
+                position: absolute; top: 65px; left: 0; right: 0; z-index: 10;
+            }
+            #menu:checked ~ .sheet { grid-template-rows: 1fr; }
+            .sheet-content {
+                overflow: hidden; background: rgba(24,24,27,.86);
+                backdrop-filter: blur(20px); border-radius: 16px; border: 1px solid rgba(255,255,255,.09);
+                padding: 0 20px; display: flex; flex-direction: column; gap: 12px;
+            }
+            #menu:checked ~ .sheet .sheet-content { padding: 20px; }
+            .sheet-content a { color: #fff; text-decoration: none; font-size: 15px; }
 
-    if st.session_state.logged_in_user is not None:
-        user_info = st.session_state.logged_in_user
-        clean_name = user_info['name'].strip()
-        st.success(f"Logged in: **{clean_name}** ({st.session_state.user_role})")
-        if st.button("Sign Out", use_container_width=True):
-            log_activity(clean_name, st.session_state.logged_in_email, "User Sign Out", "User signed out of portal")
-            st.session_state.logged_in_user = None
-            st.session_state.logged_in_email = None
-            st.rerun()
+            .h1 {
+                width: 100%; max-width: 15ch; font-size: clamp(29px, 7.6vw, 50px);
+                line-height: 1.14; letter-spacing: -.012em;
+            }
+            .card {
+                width: 100%; max-width: 600px; height: auto; margin-right: 0;
+                padding: clamp(13px, 3.4vw, 18px); border-radius: 20px;
+                display: flex; flex-direction: column; gap: clamp(16px, 4.6vh, 34px);
+            }
+            .ph {
+                position: static; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;
+                font-size: clamp(9.4px, 2.95vw, 14px);
+            }
+            .tools {
+                position: static; height: auto; display: flex; flex-direction: column;
+                align-items: stretch; gap: 12px;
+            }
+            .chips { flex-wrap: wrap; }
+            .right {
+                position: static; display: flex; align-items: center; justify-content: flex-start;
+                pointer-events: auto;
+            }
+            .right > * { position: static; }
+            .attach { margin-left: auto; }
+            .send { margin-left: 14px; width: 40px; height: 40px; }
+        }
+
+        @media (max-width: 1180px) and (max-height: 560px) {
+            main.hero { gap: 16px; }
+            .h1 { font-size: clamp(24px, 5.4vh, 34px); }
+            footer.proof { gap: 10px; }
+            .frame { padding-top: 10px; }
+        }
+
+        /* ENTRANCE ANIMATIONS */
+        @media (prefers-reduced-motion: no-preference) {
+            html.anim .brand { animation: e-settle-down .58s var(--e-soft) .06s both; }
+            html.anim .brand-mark { animation: e-mark .62s var(--e-primary) .06s both; }
+            html.anim .links a:nth-child(1) { animation: e-settle-down .50s var(--e-soft) .16s both; }
+            html.anim .links a:nth-child(2) { animation: e-settle-down .50s var(--e-soft) .21s both; }
+            html.anim .links a:nth-child(3) { animation: e-settle-down .50s var(--e-soft) .26s both; }
+            html.anim .links a:nth-child(4) { animation: e-settle-down .50s var(--e-soft) .31s both; }
+            html.anim .cta { animation: e-settle-down .55s var(--e-soft) .34s both; }
+            html.anim .h1 { animation: e-focus 1.00s var(--e-primary) .30s both; will-change: transform, opacity; }
+            html.anim .card { animation: e-panel .90s var(--e-primary) .62s both; will-change: transform, opacity; }
+            html.anim .ph { animation: e-populate .50s var(--e-soft) .88s both; }
+            html.anim .chips { animation: e-populate .50s var(--e-soft) .94s both; }
+            html.anim .right { animation: e-populate .50s var(--e-soft) 1.00s both; }
+            html.anim .send { animation: e-send .50s var(--e-primary) 1.00s both; }
+            html.anim .proof-by { animation: e-settle-up .55s var(--e-soft) 1.08s both; }
+            html.anim .logos svg:nth-child(1) { animation: e-settle-up .55s var(--e-soft) 1.16s both; }
+            html.anim .logos svg:nth-child(2) { animation: e-settle-up .55s var(--e-soft) 1.22s both; }
+            html.anim .logos svg:nth-child(3) { animation: e-settle-up .55s var(--e-soft) 1.28s both; }
+        }
+
+        @keyframes e-settle-down { from { opacity: 0; transform: translateY(calc(-5*var(--u))); } to { opacity: 1; transform: none; } }
+        @keyframes e-settle-up { from { opacity: 0; transform: translateY(calc(6*var(--u))); } to { opacity: 1; transform: none; } }
+        @keyframes e-mark { from { transform: scale(.9); } to { transform: none; } }
+        @keyframes e-focus { from { opacity: 0; transform: translateY(calc(14*var(--u))); filter: blur(6px); } to { opacity: 1; transform: none; filter: blur(0); } }
+        @keyframes e-panel { from { opacity: 0; transform: translateY(calc(18*var(--u))) scale(.985); } to { opacity: 1; transform: none; } }
+        @keyframes e-populate { from { opacity: 0; transform: translateY(calc(4*var(--u))); } to { opacity: 1; transform: none; } }
+        @keyframes e-send { from { transform: scale(.82); } to { transform: none; } }
+
+        @media (prefers-reduced-motion: reduce) {
+            * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+        }
+    </style>
+</head>
+<body>
+    <div class="stage">
+        <!-- FULL VIEWPORT BACKGROUND VIDEO -->
+        <video class="stage-video" autoplay muted loop playsinline>
+            <source src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260826_124724_bc041163-d651-425f-aea3-2acc1efc2c96.mp4" type="video/mp4">
+        </video>
+
+        <div class="frame">
+            <!-- MOBILE MENU CONTROLLER -->
+            <input type="checkbox" id="menu">
             
-        st.divider()
-        if st.session_state.user_role == "Student":
-            st.markdown("### 📌 Student Navigation")
-            nav = st.radio(
-                "Go To:",
-                ["🎓 AI Study Assistant", "📋 Custom Study Plan", "💬 Buddy (AI Chatbot)", "📅 Exam Schedule", "📊 Real Study Analytics"]
-            )
+            <!-- NAV HEADER -->
+            <header class="nav">
+                <a href="#" class="brand" aria-label="Fastshot home">
+                    <div class="brand-mark">
+                        <div class="brand-mark-inner">
+                            <div class="brand-mark-dot"></div>
+                        </div>
+                    </div>
+                    <span class="brand-wordmark">Fastshot</span>
+                </a>
 
-# ---------------------------------------------------------
-# LANDING / LOGIN PORTAL
-# ---------------------------------------------------------
-if st.session_state.logged_in_user is None:
-    
-    col_login, col_hero = st.columns([0.9, 1.1], gap="large")
+                <nav class="links">
+                    <a href="#">Features</a>
+                    <a href="#">Examples</a>
+                    <a href="#">Pricing</a>
+                    <a href="#">Docs</a>
+                </nav>
 
-    # Left Login Form
-    with col_login:
-        st.markdown('<div class="login-container">', unsafe_allow_html=True)
-        st.markdown('<div class="login-title">Login</div>', unsafe_allow_html=True)
-        st.markdown('<div class="login-sub">Enter your account details</div>', unsafe_allow_html=True)
-        
-        portal_type = st.radio("Select Portal Access:", ["Student Portal", "Admin Portal"], horizontal=True)
+                <a href="#" class="cta"><span>Get Started</span></a>
 
-        if portal_type == "Student Portal":
-            auth_mode = st.radio("Action:", ["Sign In", "Create Account"], horizontal=True)
-
-            if auth_mode == "Sign In":
-                login_email = st.text_input("Username / Email:", placeholder="student@example.com")
-                login_pass = st.text_input("Password:", type="password")
-                
-                st.write("")
-                if st.button("Login", use_container_width=True):
-                    if login_email in st.session_state.student_db and st.session_state.student_db[login_email]["password"] == login_pass:
-                        st.session_state.logged_in_user = st.session_state.student_db[login_email]
-                        st.session_state.logged_in_email = login_email
-                        st.session_state.user_role = "Student"
-                        log_activity(st.session_state.logged_in_user["name"], login_email, "Portal Login", "Student logged into the Student Portal")
-                        st.rerun()
-                    else:
-                        st.error("Invalid student email or password!")
-            else:
-                reg_name = st.text_input("Full Name:")
-                reg_email = st.text_input("Register Email:")
-                reg_pass = st.text_input("Register Password:", type="password")
-                
-                st.write("")
-                if st.button("Sign up", use_container_width=True):
-                    if reg_name and reg_email and reg_pass:
-                        st.session_state.student_db[reg_email] = {"password": reg_pass, "name": reg_name}
-                        save_json_data(STUDENT_DB_FILE, st.session_state.student_db)
-                        log_activity(reg_name, reg_email, "Account Registration", "New student account created")
-                        st.success("Student account created successfully! Switch to 'Sign In'.")
-                    else:
-                        st.warning("Please fill in all registration fields.")
-
-        else: # Admin Portal Selected
-            st.info("🔒 Admin Access is restricted. Pre-authorized admin credentials required.")
-            admin_email = st.text_input("Admin Email Address:", placeholder="admin@example.com")
-            admin_pass = st.text_input("Admin Password:", type="password")
-            
-            st.write("")
-            if st.button("Login to Admin Console", use_container_width=True):
-                if admin_email in st.session_state.admin_db and st.session_state.admin_db[admin_email]["password"] == admin_pass:
-                    st.session_state.logged_in_user = st.session_state.admin_db[admin_email]
-                    st.session_state.logged_in_email = admin_email
-                    st.session_state.user_role = "Admin"
-                    log_activity(st.session_state.logged_in_user["name"], admin_email, "Admin Console Login", "Admin logged into the console")
-                    st.rerun()
-                else:
-                    st.error("Access Denied! Invalid credentials or no Admin privileges.")
-                    
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    # Right Purple Card with Vector Graphic
-    with col_hero:
-        st.markdown("""
-            <div class="purple-hero-card">
-                <div>
-                    <div class="purple-hero-title">Welcome to<br>Classmate AI</div>
-                    <div class="purple-hero-sub">Login to access your personalized learning workspace</div>
-                </div>
-                <div style="text-align: center; margin-top: 15px;">
-                    <svg width="220" height="170" viewBox="0 0 200 160" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M40 120 C40 80, 160 80, 160 120 Z" fill="#6d28d9" opacity="0.4"/>
-                        <rect x="50" y="40" width="100" height="70" rx="8" fill="#ffffff" stroke="#1e2025" stroke-width="3"/>
-                        <line x1="65" y1="58" x2="115" y2="58" stroke="#7c3aed" stroke-width="4" stroke-linecap="round"/>
-                        <line x1="65" y1="72" x2="135" y2="72" stroke="#94a3b8" stroke-width="3" stroke-linecap="round"/>
-                        <line x1="65" y1="84" x2="105" y2="84" stroke="#94a3b8" stroke-width="3" stroke-linecap="round"/>
-                        <circle cx="125" cy="110" r="18" fill="#a855f7"/>
-                        <path d="M120 110 L124 114 L132 104" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                <label for="menu" class="burger" aria-label="Toggle Navigation">
+                    <svg width="17" height="12" viewBox="0 0 17 12" fill="none">
+                        <path d="M0 1H17M0 11H17" stroke="white" stroke-width="2"/>
                     </svg>
+                </label>
+
+                <div class="sheet">
+                    <div class="sheet-content">
+                        <a href="#">Features</a>
+                        <a href="#">Examples</a>
+                        <a href="#">Pricing</a>
+                        <a href="#">Docs</a>
+                        <a href="#" style="color: #F8B285; font-weight: 600;">Get Started</a>
+                    </div>
                 </div>
-            </div>
-        """, unsafe_allow_html=True)
+            </header>
 
-# ---------------------------------------------------------
-# VIEW 1: STUDENT DASHBOARD
-# ---------------------------------------------------------
-elif st.session_state.user_role == "Student":
-    user_name = st.session_state.logged_in_user["name"].strip()
-    user_email = st.session_state.logged_in_email
-    elapsed_minutes = int((time.time() - st.session_state.start_time) / 60)
+            <!-- HERO CONTENT -->
+            <main class="hero">
+                <h1 class="h1">Describe an app. We'll build it.</h1>
 
-    st.markdown(f"""
-        <div class="welcome-card">
-            <div class="welcome-title">Hi, {user_name}! 🎓📖</div>
-            <div class="welcome-subtitle">Classmate AI Student Portal — Solve doubts with <b>Buddy</b>, summarize notes, and track real progress.</div>
+                <form class="card" onsubmit="return false">
+                    <p class="ph">Build a fintech tracking app with bank level privacy and...</p>
+                    
+                    <div class="tools">
+                        <div class="chips">
+                            <button type="button" class="chip" style="--cw:107;--pl:12;--ig:3.7">
+                                <svg width="15" height="15" viewBox="0 0 15 15"><path d="M3.5 2A1.5 1.5 0 002 3.5v8A1.5 1.5 0 003.5 13h8a1.5 1.5 0 001.5-1.5v-8A1.5 1.5 0 0011.5 2h-8zM5 5.5a1 1 0 112 0 1 1 0 01-2 0zm-1 5.5l2.5-3 2 2.5 1.5-1.5 2 2H4z"/></svg>
+                                <span>Attach Screens</span>
+                            </button>
+                            <button type="button" class="chip" style="--cw:108;--pl:16;--ig:3.9">
+                                <svg width="12" height="15" viewBox="0 0 12 15"><path d="M3 2a2 2 0 00-2 2v2a2 2 0 002 2h2V2H3zm6 0H7v6h2a2 2 0 002-2V4a2 2 0 00-2-2zM3 9a2 2 0 00-2 2v2a2 2 0 002 2h2V9H3zm6 0H7v6h2a2 2 0 002-2v-2a2 2 0 00-2-2z"/></svg>
+                                <span>Attach a Figma</span>
+                            </button>
+                            <button type="button" class="chip" style="--cw:107;--pl:15.8;--ig:2.9">
+                                <svg width="13" height="15" viewBox="0 0 13 15"><path d="M6.5 1a5.5 5.5 0 00-5.5 5.5c0 2.2 1.3 4.1 3.2 5v1.5a1 1 0 001 1h2.6a1 1 0 001-1v-1.5c1.9-.9 3.2-2.8 3.2-5A5.5 5.5 0 006.5 1z"/></svg>
+                                <span>Today's Theme</span>
+                            </button>
+                        </div>
+
+                        <!-- EXACT ABSOLUTE RIGHT CLUSTER FOR DESKTOP -->
+                        <div class="right">
+                            <div class="model">
+                                <span>Sonnet 4.5</span>
+                                <svg viewBox="0 0 7 4"><path d="M0 0l3.5 4L7 0H0z"/></svg>
+                            </div>
+
+                            <button type="button" class="attach" aria-label="Attach File">
+                                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8">
+                                    <path d="M14.5 5.5l-6.8 6.8a2.5 2.5 0 103.5 3.5l6.8-6.8a4.5 4.5 0 10-6.4-6.4l-7.2 7.2a6.5 6.5 0 109.2 9.2l6.1-6.1"/>
+                                </svg>
+                            </button>
+
+                            <button type="submit" class="send" aria-label="Build it">
+                                <svg viewBox="0 0 12 12"><path d="M6 10.5V1.5M6 1.5L1.5 6M6 1.5L10.5 6" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </main>
+
+            <!-- FOOTER -->
+            <footer class="proof">
+                <p class="proof-by">Built by engineers from</p>
+                <div class="logos">
+                    <!-- Google -->
+                    <svg width="97" height="32" viewBox="0 0 97 32"><path d="M12.5 14.2v3.7h8.8c-.4 2.3-2.6 6.7-8.8 6.7-5.3 0-9.6-4.4-9.6-9.8s4.3-9.8 9.6-9.8c3 0 5 1.3 6.2 2.4l2.9-2.8C19.8 2.8 16.5 1.2 12.5 1.2 5.6 1.2 0 6.8 0 13.7s5.6 12.5 12.5 12.5c7.2 0 12-5.1 12-12.2 0-.8-.1-1.4-.2-1.8H12.5zM33 9.5c-4.4 0-8 3.4-8 8s3.6 8 8 8 8-3.4 8-8-3.6-8-8-8zm0 12.5c-2.4 0-4.4-2-4.4-4.5s2-4.5 4.4-4.5 4.4 2 4.4 4.5-2 4.5-4.4 4.5zm18 0c-2.4 0-4.4-2-4.4-4.5s2-4.5 4.4-4.5 4.4 2 4.4 4.5-2 4.5-4.4 4.5zm0-12.5c-4.4 0-8 3.4-8 8s3.6 8 8 8 8-3.4 8-8-3.6-8-8-8zm21.1 1c-1-.9-2.5-1.7-4.4-1.7-4.1 0-7.7 3.6-7.7 8s3.6 8 7.7 8c1.9 0 3.4-.8 4.4-1.8v1.1c0 3.1-1.7 4.7-4.3 4.7-2.2 0-3.5-1.6-4-2.5l-3.1 1.3c.9 2.2 3.3 4.7 7.1 4.7 4.2 0 7.7-2.5 7.7-8.4V9.9h-3.4v1.6zm-4.1 11.5c-2.4 0-4.2-2-4.2-4.5s1.8-4.5 4.2-4.5 4.2 2 4.2 4.5-1.8 4.5-4.2 4.5zM76 2h3.6v23.5H76V2zm13.1 7.5c-3.8 0-7 3.1-7 8 0 4.8 3.1 8 7 8 2.3 0 4-1.1 5.1-2.4l-2.8-1.9c-.8 1.1-1.8 1.8-3.1 1.8-2.1 0-3.5-1.2-4.1-2.9l9.7-4-.3-.8c-.7-2-2.7-5.8-7.5-5.8zm.2 3.4c1.4 0 2.5.7 2.9 1.7l-6.8 2.8c-.1-2.6 1.9-4.5 3.9-4.5z"/></svg>
+                    <!-- Cisco -->
+                    <svg width="68" height="32" viewBox="0 0 68 32"><path d="M4 14h3.2v11H4V14zm11.7.3c-2 0-3.5.7-4.5 1.8l2 2.2c.6-.7 1.4-1.1 2.5-1.1 1.3 0 2.1.6 2.1 1.7v.4c-.5-.3-1.4-.5-2.5-.5-2.7 0-4.4 1.3-4.4 3.2 0 1.9 1.5 3.1 3.5 3.1 1.5 0 2.7-.6 3.4-1.7v1.4h3.1V20c0-3.7-2.2-5.7-5.2-5.7zm1 6.8c0 1.2-.9 2.1-2.2 2.1-.9 0-1.6-.5-1.6-1.3 0-.8.7-1.3 1.9-1.3.7 0 1.4.2 1.9.4v.1zm12.1-7.1c-1.8 0-3.2.8-4 2.1V14h-3.2v11h3.2v-6.3c0-1.7 1-2.8 2.5-2.8 1.4 0 2.2 1 2.2 2.7V25h3.2v-6.7c0-3.1-1.7-4.3-3.9-4.3zm13.9 0c-3.6 0-6 2.5-6 5.7s2.4 5.7 6 5.7 6-2.5 6-5.7-2.4-5.7-6-5.7zm0 8.5c-1.8 0-2.8-1.4-2.8-2.8s1-2.8 2.8-2.8 2.8 1.4 2.8 2.8-1 2.8-2.8 2.8zM5.6 2v6.5h2.1V2H5.6zm10.7-2v8.5h2.1V0h-2.1zm10.7 2v6.5h2.1V2h-2.1zm10.7-2v8.5h2.1V0h-2.1zm10.7 2v6.5h2.1V2h-2.1z"/></svg>
+                    <!-- Adobe -->
+                    <svg width="89" height="32" viewBox="0 0 89 32"><path d="M0 2h11.5L0 28H0V2zm18 0h11.5L41 28h-6.2l-3.1-7.5H21L18 28h-6.2L18 2zm10.1 13.5L25 7.2l-3.1 8.3h6.2zM43 2h11.5v26H43V2zm22.4 0c5.8 0 10.1 3.8 10.1 9.4 0 3.7-1.9 6.8-5.3 8.3l6 8.3h-7l-5.1-7.3h-3.6V28h-5.5V2h10.4zm-.4 11.2c2.8 0 4.8-1.7 4.8-4.3s-2-4.2-4.8-4.2h-4.9v8.5h4.9z"/></svg>
+                </div>
+            </footer>
         </div>
-    """, unsafe_allow_html=True)
+    </div>
 
-    col_a, col_b, col_c, col_d = st.columns(4)
-    with col_a:
-        st.markdown(f'<div class="dashboard-card">⏱️ <div class="card-title">Active Study Time</div><div class="card-subtext">{elapsed_minutes} Minutes</div></div>', unsafe_allow_html=True)
-    with col_b:
-        st.markdown(f'<div class="dashboard-card">📝 <div class="card-title">Notes Summarized</div><div class="card-subtext">{st.session_state.notes_processed} Processed</div></div>', unsafe_allow_html=True)
-    with col_c:
-        st.markdown(f'<div class="dashboard-card">❓ <div class="card-title">Quizzes Generated</div><div class="card-subtext">{st.session_state.quizzes_generated} Sets</div></div>', unsafe_allow_html=True)
-    with col_d:
-        st.markdown(f'<div class="dashboard-card">📅 <div class="card-title">Exams Scheduled</div><div class="card-subtext">{len(st.session_state.exam_schedule)} Scheduled</div></div>', unsafe_allow_html=True)
+    <script>
+        // Teardown entrance animation class after total timeline duration
+        window.addEventListener('DOMContentLoaded', () => {
+            const timeout = setTimeout(() => {
+                document.documentElement.classList.remove('anim');
+            }, 2600);
 
-    st.write("")
+            const lastLogo = document.querySelector('.logos svg:last-child');
+            if (lastLogo) {
+                lastLogo.addEventListener('animationend', () => {
+                    clearTimeout(timeout);
+                    document.documentElement.classList.remove('anim');
+                }, { once: true });
+            }
+        });
+    </script>
+</body>
+</html>
+"""
 
-    if nav == "🎓 AI Study Assistant":
-        st.markdown("### 🛠️ AI Study Assistant Workspace")
-        col1, col2 = st.columns([1, 1], gap="large")
-
-        with col1:
-            st.markdown('<div class="workspace-container">', unsafe_allow_html=True)
-            st.markdown("#### 📝 Study Material Input")
-            
-            feature = st.selectbox(
-                "Select Action:",
-                ["Summarize Notes", "Generate Practice Quiz", "Explain Concept Simply"]
-            )
-
-            input_mode = st.radio("Input Method:", ["Paste Text", "Upload Document/Image"])
-            extracted_text = ""
-            uploaded_file = None
-            file_bytes_payload = None
-
-            if input_mode == "Paste Text":
-                extracted_text = st.text_area("Enter study material or notes:", height=180, placeholder="Paste study notes or text on any topic...")
-            else:
-                uploaded_file = st.file_uploader("Upload File (PDF, PPT, Excel, Image):", type=["pdf", "pptx", "xlsx", "xls", "csv", "png", "jpg", "jpeg", "txt"])
-                if uploaded_file is not None:
-                    file_bytes_payload = uploaded_file.getvalue()
-                    file_type = uploaded_file.name.split(".")[-1].lower()
-                    try:
-                        if file_type == "pdf":
-                            reader = pypdf.PdfReader(uploaded_file)
-                            for page in reader.pages:
-                                text = page.extract_text()
-                                if text: extracted_text += text + "\n"
-                        elif file_type == "pptx":
-                            prs = Presentation(uploaded_file)
-                            for slide in prs.slides:
-                                for shape in slide.shapes:
-                                    if hasattr(shape, "text"): extracted_text += shape.text + "\n"
-                        elif file_type in ["xlsx", "xls", "csv"]:
-                            df = pd.read_csv(uploaded_file) if file_type == "csv" else pd.read_excel(uploaded_file)
-                            extracted_text = df.to_string()
-                        elif file_type == "txt":
-                            extracted_text = uploaded_file.read().decode("utf-8")
-                        elif file_type in ["png", "jpg", "jpeg"]:
-                            st.image(uploaded_file, caption="Uploaded Image", use_container_width=True)
-                            
-                        st.success(f"Parsed: {uploaded_file.name}")
-                    except Exception as e:
-                        st.error(f"Error parsing file: {str(e)}")
-
-            generate_btn = st.button("🚀 Process with AI", use_container_width=True)
-            st.markdown('</div>', unsafe_allow_html=True)
-
-        with col2:
-            st.markdown('<div class="workspace-container">', unsafe_allow_html=True)
-            st.markdown("#### 💡 AI Output")
-            
-            if generate_btn:
-                if input_mode == "Paste Text" and not extracted_text.strip():
-                    st.warning("⚠️ Please provide text before submitting!")
-                elif input_mode == "Upload Document/Image" and uploaded_file is None:
-                    st.warning("⚠️ Please upload a file first!")
-                else:
-                    if feature == "Summarize Notes":
-                        instruction = "Summarize the following study material into clear, structured bullet points with headers:"
-                        st.session_state.notes_processed += 1
-                    elif feature == "Generate Practice Quiz":
-                        instruction = "Create 3 practice multiple-choice questions (A-D) with correct answers and explanations based on this study material:"
-                        st.session_state.quizzes_generated += 1
-                    else:
-                        instruction = "Explain the main concepts in this study material in simple terms with examples:"
-                        st.session_state.concepts_explained += 1
-
-                    try:
-                        with st.spinner("Classmate AI processing..."):
-                            if input_mode == "Upload Document/Image":
-                                ext = uploaded_file.name.split(".")[-1].lower()
-                                if ext in ["png", "jpg", "jpeg"]:
-                                    image_input = Image.open(io.BytesIO(file_bytes_payload))
-                                    contents = [image_input, instruction]
-                                elif ext == "pdf" and not extracted_text.strip():
-                                    pdf_part = types.Part.from_bytes(
-                                        data=file_bytes_payload,
-                                        mime_type="application/pdf"
-                                    )
-                                    contents = [pdf_part, instruction]
-                                else:
-                                    contents = f"{instruction}\n\n{extracted_text}"
-                            else:
-                                contents = f"{instruction}\n\n{extracted_text}"
-
-                            res = query_gemini(contents)
-                            st.markdown(res)
-                            log_activity(user_name, user_email, f"Used AI Assistant: {feature}", f"Mode: {input_mode}")
-                    except Exception as e:
-                        st.error(f"❌ {str(e)}")
-            else:
-                st.info("AI generated output will appear here.")
-            st.markdown('</div>', unsafe_allow_html=True)
-
-    elif nav == "📋 Custom Study Plan":
-        st.subheader("📋 Custom Study Plan (To-Do List)")
-        col_td1, col_td2 = st.columns([1, 1], gap="large")
-
-        with col_td1:
-            st.markdown('<div class="workspace-container">', unsafe_allow_html=True)
-            st.markdown("### ➕ Add New Task")
-            new_task = st.text_input("Enter study goal or topic:", placeholder="e.g. Read Physics Chapter 3")
-            if st.button("Add to Study Plan", use_container_width=True):
-                if new_task.strip():
-                    st.session_state.todo_list.append({"task": new_task, "done": False})
-                    log_activity(user_name, user_email, "Added Study Plan Task", f"Task: {new_task}")
-                    st.success("Task added!")
-                    st.rerun()
-                else:
-                    st.warning("Please enter a task name.")
-            st.markdown('</div>', unsafe_allow_html=True)
-
-        with col_td2:
-            st.markdown('<div class="workspace-container">', unsafe_allow_html=True)
-            st.markdown("### 📌 Active Tasks")
-            if st.session_state.todo_list:
-                for idx, item in enumerate(st.session_state.todo_list):
-                    col_chk, col_btn = st.columns([4, 1])
-                    with col_chk:
-                        done = st.checkbox(item["task"], value=item["done"], key=f"task_{idx}")
-                        if done != item["done"]:
-                            st.session_state.todo_list[idx]["done"] = done
-                            status_str = "Completed" if done else "Marked Incomplete"
-                            log_activity(user_name, user_email, f"Updated Study Task ({status_str})", f"Task: {item['task']}")
-                    with col_btn:
-                        if st.button("❌", key=f"del_task_{idx}"):
-                            removed_item = st.session_state.todo_list.pop(idx)
-                            log_activity(user_name, user_email, "Deleted Study Task", f"Task: {removed_item['task']}")
-                            st.rerun()
-            else:
-                st.info("No study tasks added yet!")
-            st.markdown('</div>', unsafe_allow_html=True)
-
-    elif nav == "💬 Buddy (AI Chatbot)":
-        st.subheader("💬 Buddy — Universal Doubt Clearing Chatbot")
-        st.write("Ask Buddy any doubt regarding **any subject or topic** (Math, Science, History, Coding, Languages, etc.)!")
-
-        for message in st.session_state.messages:
-            with st.chat_message(message["role"]):
-                st.markdown(message["content"])
-
-        active_prompt = st.chat_input("Ask Buddy a question about any subject...")
-
-        if active_prompt:
-            st.session_state.messages.append({"role": "user", "content": active_prompt})
-            with st.chat_message("user"):
-                st.markdown(active_prompt)
-
-            with st.chat_message("assistant"):
-                try:
-                    with st.spinner("Buddy is answering..."):
-                        chat_prompt = f"You are Buddy, a friendly expert tutor for all academic subjects. Answer the student's question clearly and step-by-step.\n\nStudent Question: {active_prompt}"
-                        reply_text = query_gemini(chat_prompt)
-                        st.markdown(reply_text)
-                        st.session_state.messages.append({"role": "assistant", "content": reply_text})
-                        log_activity(user_name, user_email, "Asked Buddy (Chatbot)", f"Prompt: {active_prompt[:60]}...")
-                except Exception as e:
-                    st.error(f"Chatbot Error: {str(e)}")
-
-    elif nav == "📅 Exam Schedule":
-        st.subheader("📅 Dynamic Exam Schedule Manager")
-        col_sch1, col_sch2 = st.columns([1, 1], gap="large")
-        
-        with col_sch1:
-            st.markdown('<div class="workspace-container">', unsafe_allow_html=True)
-            st.markdown("### ➕ Add Exam / Task")
-            new_subject = st.text_input("Exam Name:", placeholder="e.g. Physics Midterm")
-            new_date = st.date_input("Exam Date:")
-            
-            if st.button("Save Exam", use_container_width=True):
-                if new_subject.strip():
-                    st.session_state.exam_schedule.append({"subject": new_subject, "date": str(new_date)})
-                    log_activity(user_name, user_email, "Added Scheduled Exam", f"Exam: {new_subject} on {new_date}")
-                    st.success(f"Added **{new_subject}** on `{new_date}`!")
-                else:
-                    st.warning("Enter an exam name.")
-            st.markdown('</div>', unsafe_allow_html=True)
-
-        with col_sch2:
-            st.markdown('<div class="workspace-container">', unsafe_allow_html=True)
-            st.markdown("### 📋 Scheduled Exams")
-            if st.session_state.exam_schedule:
-                for idx, item in enumerate(st.session_state.exam_schedule):
-                    st.markdown(f"**{idx + 1}. {item['subject']}** — 🗓️ `{item['date']}`")
-            else:
-                st.info("No exams scheduled.")
-            st.markdown('</div>', unsafe_allow_html=True)
-
-    else:
-        st.subheader("📊 Real Session Study Analytics")
-        st.markdown("Real-time activity stats generated from your current study session:")
-        
-        col_m1, col_m2, col_m3 = st.columns(3)
-        col_m1.metric("Active Session Time", f"{elapsed_minutes} mins")
-        col_m2.metric("Notes Summarized", f"{st.session_state.notes_processed}")
-        col_m3.metric("Quizzes Completed", f"{st.session_state.quizzes_generated}")
-
-        st.divider()
-        st.markdown("**Real Activity Breakdown**")
-        activity_data = pd.DataFrame({
-            "Activity": ["Summaries", "Quizzes", "Concepts Explained"],
-            "Count": [st.session_state.notes_processed, st.session_state.quizzes_generated, st.session_state.concepts_explained]
-        })
-        st.bar_chart(activity_data.set_index("Activity"))
-
-# ---------------------------------------------------------
-# VIEW 2: ADMIN DASHBOARD
-# ---------------------------------------------------------
-else:
-    admin_name = st.session_state.logged_in_user["name"].strip()
-
-    st.markdown(f"""
-        <div class="welcome-card">
-            <div class="welcome-title">🛡️ Admin Control Console</div>
-            <div class="welcome-subtitle">Welcome, <b>{admin_name}</b>. Manage student accounts, monitor live activity logs, grant admin privileges, and manage exams.</div>
-        </div>
-    """, unsafe_allow_html=True)
-
-    admin_tabs = st.tabs([
-        "👥 Student Accounts & Access Control", 
-        "📊 Live Student Usage Logs", 
-        "🛡️ Active Admin List", 
-        "📅 System Exam Manager"
-    ])
-
-    # Tab 1: Access Control
-    with admin_tabs[0]:
-        st.subheader("Manage Registered Students & Grant Admin Access")
-        
-        if st.session_state.student_db:
-            for email, info in list(st.session_state.student_db.items()):
-                col_u1, col_u2 = st.columns([3, 1])
-                with col_u1:
-                    st.write(f"👤 **{info['name'].strip()}** (`{email}`)")
-                with col_u2:
-                    is_admin = email in st.session_state.admin_db
-                    if is_admin:
-                        st.success("Admin Access Granted")
-                    else:
-                        if st.button(f"Grant Admin Access", key=f"grant_{email}", use_container_width=True):
-                            st.session_state.admin_db[email] = {
-                                "password": info["password"],
-                                "name": f"{info['name'].strip()} (Admin)"
-                            }
-                            st.success(f"Granted Admin privileges to {info['name'].strip()}!")
-                            st.rerun()
-        else:
-            st.info("No registered student accounts yet.")
-
-    # Tab 2: Activity Logs View
-    with admin_tabs[1]:
-        st.subheader("📊 Live Student Usage & Activity Logs")
-        st.caption("Track logins, tool usage, chatbot prompts, and study tasks in real-time.")
-
-        if st.session_state.user_activity_log:
-            df_logs = pd.DataFrame(st.session_state.user_activity_log)
-            st.dataframe(df_logs, use_container_width=True)
-        else:
-            st.info("No student activity logged yet in this session.")
-
-    # Tab 3: Admin List
-    with admin_tabs[2]:
-        st.subheader("Active Authorized Admins")
-        admins_list = [{"Admin Name": info["name"], "Email": email} for email, info in st.session_state.admin_db.items()]
-        st.dataframe(pd.DataFrame(admins_list), use_container_width=True)
-
-    # Tab 4: System Exams
-    with admin_tabs[3]:
-        st.subheader("Active System Exams")
-        if st.session_state.exam_schedule:
-            for idx, item in enumerate(st.session_state.exam_schedule):
-                col_e1, col_e2 = st.columns([3, 1])
-                with col_e1: st.write(f"**{idx+1}. {item['subject']}** (`{item['date']}`)")
-                with col_e2:
-                    if st.button(f"Delete #{idx+1}", key=f"del_{idx}", use_container_width=True):
-                        st.session_state.exam_schedule.pop(idx)
-                        st.rerun()
-        else:
-            st.info("No exams in database.")
+# 4. Render as Full-Viewport Component inside Streamlit
+components.html(HTML_HERO_PAYLOAD, height=1000, scrolling=False)
