@@ -236,28 +236,28 @@ if st.session_state.logged_in_user is None:
 
         /* Radio Container Outer Box */
         div[data-testid="stRadio"] > div {
-            background-color: rgba(0, 0, 0, 0.3);
-            padding: 6px 12px;
-            border-radius: 10px;
-            border: 1px solid rgba(255, 255, 255, 0.15);
+            background-color: rgba(0, 0, 0, 0.3) !important;
+            padding: 6px 12px !important;
+            border-radius: 10px !important;
+            border: 1px solid rgba(255, 255, 255, 0.15) !important;
         }
 
-        /* Keep labels transparent and only style the radio dot in purple */
+        /* Clean transparent background for text labels */
         div[data-testid="stRadio"] label {
             background-color: transparent !important;
         }
-        div[data-testid="stRadio"] label span {
+        div[data-testid="stRadio"] label * {
+            background-color: transparent !important;
             color: #ffffff !important;
-            background-color: transparent !important;
         }
-        
-        /* Targeted CSS for purple bullet dots */
-        div[data-testid="stRadio"] div[role="radiogroup"] label div:first-child {
-            border-color: #9333ea !important;
-            background-color: transparent !important;
-        }
-        div[data-testid="stRadio"] div[role="radiogroup"] label div:first-child > div {
+
+        /* Direct SVG / Radio Bullet targeting for Streamlit v1.63+ */
+        div[data-testid="stRadio"] input[type="radio"]:checked + div {
             background-color: #9333ea !important;
+            border-color: #9333ea !important;
+        }
+        div[data-testid="stRadio"] [data-baseweb="radio"] div {
+            border-color: #9333ea !important;
         }
 
         div.stButton > button {
