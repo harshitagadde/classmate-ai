@@ -202,7 +202,7 @@ if st.session_state.logged_in_user is None:
             border-radius: 24px !important;
             padding: 20px 30px 30px 30px !important;
             box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5) !important;
-            margin-top: -30px !important; /* Pull card up to eliminate blank top space */
+            margin-top: -30px !important;
         }
 
         .hero-title {
@@ -234,7 +234,7 @@ if st.session_state.logged_in_user is None:
             border-radius: 10px !important;
         }
 
-        /* Radio Container Styling */
+        /* Radio Container Outer Box */
         div[data-testid="stRadio"] > div {
             background-color: rgba(0, 0, 0, 0.3);
             padding: 6px 12px;
@@ -242,12 +242,19 @@ if st.session_state.logged_in_user is None:
             border: 1px solid rgba(255, 255, 255, 0.15);
         }
 
-        /* Force Purple Accent Color for Radio Buttons & Active Indicators */
+        /* Keep labels transparent and only style the radio dot in purple */
+        div[data-testid="stRadio"] label {
+            background-color: transparent !important;
+        }
         div[data-testid="stRadio"] label span {
             color: #ffffff !important;
+            background-color: transparent !important;
         }
+        
+        /* Targeted CSS for purple bullet dots */
         div[data-testid="stRadio"] div[role="radiogroup"] label div:first-child {
             border-color: #9333ea !important;
+            background-color: transparent !important;
         }
         div[data-testid="stRadio"] div[role="radiogroup"] label div:first-child > div {
             background-color: #9333ea !important;
