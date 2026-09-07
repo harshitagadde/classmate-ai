@@ -171,7 +171,7 @@ with st.sidebar:
 # ---------------------------------------------------------
 if st.session_state.logged_in_user is None:
     
-    # Inject background video overlay for the entire viewport
+    # Inject background video overlay and custom styles
     st.markdown("""
         <style>
         .stApp {
@@ -195,23 +195,23 @@ if st.session_state.logged_in_user is None:
             -webkit-backdrop-filter: blur(20px) saturate(120%) !important;
             border: 1px solid rgba(255, 255, 255, 0.12) !important;
             border-radius: 24px !important;
-            padding: 30px !important;
+            padding: 20px 30px 30px 30px !important; /* Reduced top padding to remove empty space */
             box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5) !important;
-            margin-top: 10px;
+            margin-top: 0px !important;
         }
 
         .hero-title {
             font-size: 2.2rem !important;
             font-weight: 800 !important;
             color: #ffffff !important;
-            margin-bottom: 6px !important;
+            margin-bottom: 2px !important;
             text-shadow: 0 2px 10px rgba(0,0,0,0.5);
         }
 
         .hero-subtitle {
             font-size: 1rem !important;
             color: rgba(255, 255, 255, 0.85) !important;
-            margin-bottom: 20px !important;
+            margin-bottom: 16px !important;
             font-weight: 500 !important;
         }
 
@@ -229,11 +229,24 @@ if st.session_state.logged_in_user is None:
             border-radius: 10px !important;
         }
 
+        /* Radio Container Styling */
         div[data-testid="stRadio"] > div {
             background-color: rgba(0, 0, 0, 0.3);
             padding: 6px 12px;
             border-radius: 10px;
             border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        /* Change Radio Selection Bullets to Theme Purple */
+        div[data-testid="stRadio"] input[type="radio"]:checked + div div {
+            background-color: #9333ea !important;
+            border-color: #9333ea !important;
+        }
+        div[data-testid="stRadio"] label[data-baseweb="radio"] div:first-child {
+            border-color: #9333ea !important;
+        }
+        div[data-testid="stRadio"] input[type="radio"]:checked + div {
+            background-color: #9333ea !important;
         }
 
         div.stButton > button {
