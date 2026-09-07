@@ -140,89 +140,6 @@ def query_gemini(contents):
             
     raise Exception(f"Gemini API Error: {str(last_err)}")
 
-# Global Custom CSS for Dashboard Theme
-st.markdown("""
-    <style>
-    .login-container { padding-top: 10px; }
-    .login-title {
-        font-size: 2.5rem !important;
-        font-weight: 800 !important;
-        color: var(--text-color) !important;
-        margin-bottom: 2px !important;
-    }
-    .login-sub {
-        color: var(--text-color) !important;
-        opacity: 0.8;
-        font-size: 1rem !important;
-        margin-bottom: 20px !important;
-        font-weight: 500;
-    }
-    .stMarkdown, p, span, label, div[data-testid="stWidgetLabel"] {
-        color: var(--text-color) !important;
-        font-size: 1rem !important;
-        font-weight: 600 !important;
-    }
-    .stTextInput input, .stTextArea textarea, div[data-baseweb="select"] {
-        background-color: var(--secondary-background-color) !important;
-        color: var(--text-color) !important;
-        border: 1px solid rgba(128, 128, 128, 0.3) !important;
-        border-radius: 8px !important;
-    }
-    div[data-testid="stRadio"] > div {
-        background-color: var(--secondary-background-color);
-        padding: 8px 12px;
-        border-radius: 10px;
-        border: 1px solid rgba(128, 128, 128, 0.2);
-        margin-bottom: 10px;
-    }
-    div[data-testid="stRadio"] label span {
-        color: var(--text-color) !important;
-        font-weight: 700 !important;
-    }
-    div.stButton > button {
-        background-color: #9333ea !important;
-        color: #ffffff !important;
-        border-radius: 10px !important;
-        font-size: 1rem !important;
-        font-weight: 800 !important;
-        border: none !important;
-        padding: 0.6rem 1rem !important;
-    }
-    div.stButton > button * { color: #ffffff !important; }
-    div.stButton > button:hover { background-color: #7e22ce !important; }
-    .welcome-card {
-        background: var(--secondary-background-color);
-        padding: 20px; 
-        border-radius: 14px; 
-        border: 1px solid rgba(128, 128, 128, 0.2);
-        margin-bottom: 16px; 
-    }
-    .welcome-title { font-size: 2rem !important; font-weight: 800 !important; color: var(--text-color) !important; }
-    .welcome-subtitle { color: var(--text-color) !important; opacity: 0.85; font-size: 1rem !important; }
-    .dashboard-card {
-        background-color: var(--secondary-background-color); 
-        padding: 14px; 
-        border-radius: 12px;
-        border: 1px solid rgba(128, 128, 128, 0.2); 
-        text-align: center;
-        margin-bottom: 10px;
-    }
-    .card-title { font-weight: 800; color: var(--text-color); font-size: 1rem; }
-    .card-subtext { color: #9333ea; font-weight: 700; font-size: 0.9rem; }
-    .workspace-container {
-        background-color: var(--secondary-background-color); 
-        padding: 20px; 
-        border-radius: 14px;
-        border: 1px solid rgba(128, 128, 128, 0.2); 
-    }
-    @media (max-width: 768px) {
-        .login-title { font-size: 2rem !important; }
-        .welcome-title { font-size: 1.5rem !important; }
-        div[data-testid="column"] { width: 100% !important; margin-bottom: 10px; }
-    }
-    </style>
-""", unsafe_allow_html=True)
-
 # ---------------------------------------------------------
 # SIDEBAR NAVIGATION
 # ---------------------------------------------------------
@@ -250,160 +167,99 @@ with st.sidebar:
             )
 
 # ---------------------------------------------------------
-# LANDING PAGE WITH HERO MOTION DESIGN
+# LANDING PAGE WITH DIRECT MOTION SIGN-IN OVERLAY
 # ---------------------------------------------------------
 if st.session_state.logged_in_user is None:
     
-    # Motion Landing Hero Component
-    MOTION_HERO_HTML = """
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,100..900&display=block" rel="stylesheet">
-        <script>document.documentElement.classList.add('anim');</script>
+    # Inject background video overlay for the entire viewport
+    st.markdown("""
         <style>
-            *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-            html, body { height: 100%; width: 100%; overflow: hidden; background: #0a0d12; font-family: Inter, sans-serif; }
-            
-            :root {
-                --u: min(0.06410256vw, 0.12400794vh);
-                --vu: 0.09920635vh;
-                --e-primary: cubic-bezier(.16,1,.3,1);
-                --e-soft: cubic-bezier(.22,1,.36,1);
-            }
-            
-            .stage { position: fixed; inset: 0; overflow: hidden; background: #0a0d12; }
-            .stage-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; }
-            
-            .frame {
-                position: absolute; inset: 0; z-index: 1;
-                display: flex; flex-direction: column;
-                padding: calc(30*var(--vu)) calc(120*var(--u)) calc(40*var(--vu));
-            }
-            
-            header.nav {
-                height: calc(43*var(--u));
-                display: flex; align-items: center; justify-content: space-between;
-                position: relative; width: 100%;
-            }
-            
-            .brand { display: flex; align-items: center; gap: calc(12*var(--u)); text-decoration: none; color: #fff; }
-            .brand-mark { width: calc(34*var(--u)); height: calc(34*var(--u)); border-radius: 50%; background: #9C86CE; display: flex; align-items: center; justify-content: center; }
-            .brand-mark-inner { width: calc(17.2*var(--u)); height: calc(17.2*var(--u)); border-radius: 50%; background: #FFFFFF; display: flex; align-items: center; justify-content: center; }
-            .brand-mark-dot { width: calc(7.4*var(--u)); height: calc(7.4*var(--u)); border-radius: 50%; background: #151519; }
-            .brand-wordmark { font-size: calc(20*var(--u)); font-weight: 600; color: #fff; }
-
-            main.hero {
-                flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
-                gap: calc(30*var(--vu));
-            }
-
-            .h1 {
-                font-size: calc(38*var(--u)); font-weight: 500; color: #ffffff;
-                text-shadow: 0 calc(2*var(--u)) calc(22*var(--u)) rgba(0,0,0,.40);
-                text-align: center;
-            }
-
-            .card {
-                width: calc(708*var(--u)); height: calc(143*var(--u));
-                border-radius: calc(26*var(--u));
-                background: rgba(41,41,43,.85);
-                backdrop-filter: blur(calc(26*var(--u))) saturate(112%);
-                box-shadow: inset 0 0 0 1px rgba(214,228,255,.14), 0 calc(22*var(--u)) calc(60*var(--u)) rgba(0,0,0,.40);
-                position: relative;
-            }
-
-            .ph {
-                position: absolute; left: calc(27*var(--u)); top: calc(33*var(--u)); right: calc(24*var(--u));
-                color: #A9AAAD; font-size: calc(11*var(--u)); font-weight: 400; white-space: nowrap; overflow: hidden;
-            }
-
-            .tools {
-                position: absolute; left: calc(19*var(--u)); top: calc(92*var(--u));
-                height: calc(30*var(--u)); right: calc(-1*var(--u));
-            }
-
-            .chips { display: flex; align-items: center; gap: calc(5.5*var(--u)); }
-            .chip {
-                height: calc(30*var(--u)); border-radius: calc(9*var(--u));
-                font-size: calc(9.5*var(--u)); font-weight: 500; color: #d0d0d3;
-                background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.08);
-                display: inline-flex; align-items: center; padding: 0 calc(12*var(--u));
-            }
-
-            .right { position: absolute; inset: 0; pointer-events: none; }
-            .right > * { position: absolute; pointer-events: auto; }
-            .model { left: calc(510.2*var(--u)); top: calc(15.5*var(--u)); font-size: calc(10.4*var(--u)); color: #98999C; }
-            .attach { left: calc(599.15*var(--u)); top: calc(10.14*var(--u)); color: #A9AAAD; }
-            .send {
-                left: calc(640*var(--u)); top: calc(2*var(--u));
-                width: calc(35*var(--u)); height: calc(35*var(--u)); border-radius: 50%;
-                background: linear-gradient(163deg, #FBBC94 0%, #E88654 100%);
-                display: flex; align-items: center; justify-content: center;
-            }
-
-            /* Animations */
-            html.anim .brand { animation: e-settle-down .58s var(--e-soft) .06s both; }
-            html.anim .h1 { animation: e-focus 1.00s var(--e-primary) .30s both; }
-            html.anim .card { animation: e-panel .90s var(--e-primary) .62s both; }
-
-            @keyframes e-settle-down { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: none; } }
-            @keyframes e-focus { from { opacity: 0; transform: translateY(14px); filter: blur(6px); } to { opacity: 1; transform: none; filter: blur(0); } }
-            @keyframes e-panel { from { opacity: 0; transform: translateY(18px) scale(.985); } to { opacity: 1; transform: none; } }
-        </style>
-    </head>
-    <body>
-        <div class="stage">
-            <video class="stage-video" autoplay muted loop playsinline>
-                <source src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260826_124724_bc041163-d651-425f-aea3-2acc1efc2c96.mp4" type="video/mp4">
-            </video>
-            <div class="frame">
-                <header class="nav">
-                    <div class="brand">
-                        <div class="brand-mark"><div class="brand-mark-inner"><div class="brand-mark-dot"></div></div></div>
-                        <span class="brand-wordmark">Classmate AI</span>
-                    </div>
-                </header>
-                <main class="hero">
-                    <h1 class="h1">Summarize notes. Generate quizzes. Solve doubts.</h1>
-                    <div class="card">
-                        <p class="ph">Ask Buddy any question or upload your study materials...</p>
-                        <div class="tools">
-                            <div class="chips">
-                                <div class="chip">Attach PDF / PPT</div>
-                                <div class="chip">Practice Quiz</div>
-                                <div class="chip">Exam Helper</div>
-                            </div>
-                            <div class="right">
-                                <div class="model">Gemini 3.6 Flash</div>
-                                <div class="attach">📎</div>
-                                <div class="send">
-                                    <svg width="12" height="12" viewBox="0 0 12 12"><path d="M6 10.5V1.5M6 1.5L1.5 6M6 1.5L10.5 6" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </main>
-            </div>
-        </div>
-    </body>
-    </html>
-    """
-    
-    # Render Motion Hero Graphic
-    components.html(MOTION_HERO_HTML, height=360, scrolling=False)
-    
-    st.divider()
-
-    col_login, col_info = st.columns([1, 1], gap="large")
-
-    # Left Login Form
-    with col_login:
-        st.markdown('<div class="login-container">', unsafe_allow_html=True)
-        st.markdown('<div class="login-title">Sign In to Classmate AI</div>', unsafe_allow_html=True)
-        st.markdown('<div class="login-sub">Enter your account credentials to launch workspace</div>', unsafe_allow_html=True)
+        .stApp {
+            background-color: transparent !important;
+        }
+        #bg-video {
+            position: fixed;
+            right: 0;
+            bottom: 0;
+            min-width: 100%;
+            min-height: 100%;
+            z-index: -1;
+            object-fit: cover;
+            filter: brightness(0.65) contrast(1.1);
+        }
         
+        /* Glassmorphic Container for Login Panel */
+        .motion-login-card {
+            background: rgba(24, 24, 27, 0.72) !important;
+            backdrop-filter: blur(20px) saturate(120%) !important;
+            -webkit-backdrop-filter: blur(20px) saturate(120%) !important;
+            border: 1px solid rgba(255, 255, 255, 0.12) !important;
+            border-radius: 24px !important;
+            padding: 30px !important;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5) !important;
+            margin-top: 10px;
+        }
+
+        .hero-title {
+            font-size: 2.2rem !important;
+            font-weight: 800 !important;
+            color: #ffffff !important;
+            margin-bottom: 6px !important;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+        }
+
+        .hero-subtitle {
+            font-size: 1rem !important;
+            color: rgba(255, 255, 255, 0.85) !important;
+            margin-bottom: 20px !important;
+            font-weight: 500 !important;
+        }
+
+        /* Streamlit Controls Adaptation on Video Overlay */
+        .stMarkdown, p, span, label, div[data-testid="stWidgetLabel"] {
+            color: #ffffff !important;
+            font-size: 0.95rem !important;
+            font-weight: 600 !important;
+        }
+
+        .stTextInput input {
+            background-color: rgba(0, 0, 0, 0.4) !important;
+            color: #ffffff !important;
+            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+            border-radius: 10px !important;
+        }
+
+        div[data-testid="stRadio"] > div {
+            background-color: rgba(0, 0, 0, 0.3);
+            padding: 6px 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        div.stButton > button {
+            background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%) !important;
+            color: #ffffff !important;
+            border-radius: 10px !important;
+            font-size: 1rem !important;
+            font-weight: 800 !important;
+            border: none !important;
+            box-shadow: 0 4px 15px rgba(124, 58, 237, 0.4) !important;
+        }
+        </style>
+
+        <video autoplay muted loop playsinline id="bg-video">
+            <source src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260826_124724_bc041163-d651-425f-aea3-2acc1efc2c96.mp4" type="video/mp4">
+        </video>
+    """, unsafe_allow_html=True)
+
+    # Directly Position Sign In Form Over Motion Backdrop
+    col_left, col_center, col_right = st.columns([0.15, 0.7, 0.15])
+
+    with col_center:
+        st.markdown('<div class="motion-login-card">', unsafe_allow_html=True)
+        st.markdown('<div class="hero-title">Classmate AI Portal</div>', unsafe_allow_html=True)
+        st.markdown('<div class="hero-subtitle">Summarize notes, generate quizzes, and solve doubts instantly.</div>', unsafe_allow_html=True)
+
         portal_type = st.radio("Select Portal Access:", ["Student Portal", "Admin Portal"], horizontal=True)
 
         if portal_type == "Student Portal":
@@ -414,7 +270,7 @@ if st.session_state.logged_in_user is None:
                 login_pass = st.text_input("Password:", type="password")
                 
                 st.write("")
-                if st.button("Login", use_container_width=True):
+                if st.button("Login to Portal", use_container_width=True):
                     if login_email in st.session_state.student_db and st.session_state.student_db[login_email]["password"] == login_pass:
                         st.session_state.logged_in_user = st.session_state.student_db[login_email]
                         st.session_state.logged_in_email = login_email
@@ -429,17 +285,17 @@ if st.session_state.logged_in_user is None:
                 reg_pass = st.text_input("Register Password:", type="password")
                 
                 st.write("")
-                if st.button("Sign up", use_container_width=True):
+                if st.button("Create Account", use_container_width=True):
                     if reg_name and reg_email and reg_pass:
                         st.session_state.student_db[reg_email] = {"password": reg_pass, "name": reg_name}
                         save_json_data(STUDENT_DB_FILE, st.session_state.student_db)
                         log_activity(reg_name, reg_email, "Account Registration", "New student account created")
-                        st.success("Student account created successfully! Switch to 'Sign In'.")
+                        st.success("Account created successfully! Switch to 'Sign In'.")
                     else:
                         st.warning("Please fill in all registration fields.")
 
         else: # Admin Portal Selected
-            st.info("🔒 Admin Access is restricted. Pre-authorized admin credentials required.")
+            st.info("🔒 Admin Access is restricted. Pre-authorized credentials required.")
             admin_email = st.text_input("Admin Email Address:", placeholder="admin@example.com")
             admin_pass = st.text_input("Admin Password:", type="password")
             
@@ -453,22 +309,8 @@ if st.session_state.logged_in_user is None:
                     st.rerun()
                 else:
                     st.error("Access Denied! Invalid credentials or no Admin privileges.")
-                    
-        st.markdown('</div>', unsafe_allow_html=True)
 
-    with col_info:
-        st.markdown("""
-            <div class="workspace-container">
-                <h3>✨ Welcome to Classmate AI</h3>
-                <p>An all-in-one AI learning assistant designed to transform the way you study.</p>
-                <ul>
-                    <li><b>Summarize Notes:</b> Turn long textbooks into clear bullet points.</li>
-                    <li><b>Practice Quizzes:</b> Generate instant MCQs to test yourself.</li>
-                    <li><b>Buddy AI Chatbot:</b> Clear academic doubts in any subject.</li>
-                    <li><b>Exam Planner:</b> Organize exam deadlines and daily goals.</li>
-                </ul>
-            </div>
-        """, unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
 # ---------------------------------------------------------
 # VIEW 1: STUDENT DASHBOARD
