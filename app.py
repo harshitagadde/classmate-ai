@@ -171,9 +171,14 @@ with st.sidebar:
 # ---------------------------------------------------------
 if st.session_state.logged_in_user is None:
     
-    # Inject background video overlay and custom styles
+    # Inject background video overlay and custom CSS overrides
     st.markdown("""
         <style>
+        /* Zero out top margins and padding */
+        .block-container {
+            padding-top: 1rem !important;
+            padding-bottom: 0rem !important;
+        }
         .stApp {
             background-color: transparent !important;
         }
@@ -195,9 +200,9 @@ if st.session_state.logged_in_user is None:
             -webkit-backdrop-filter: blur(20px) saturate(120%) !important;
             border: 1px solid rgba(255, 255, 255, 0.12) !important;
             border-radius: 24px !important;
-            padding: 20px 30px 30px 30px !important; /* Reduced top padding to remove empty space */
+            padding: 20px 30px 30px 30px !important;
             box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5) !important;
-            margin-top: 0px !important;
+            margin-top: -30px !important; /* Pull card up to eliminate blank top space */
         }
 
         .hero-title {
@@ -215,7 +220,7 @@ if st.session_state.logged_in_user is None:
             font-weight: 500 !important;
         }
 
-        /* Streamlit Controls Adaptation on Video Overlay */
+        /* Text Contrast Overrides */
         .stMarkdown, p, span, label, div[data-testid="stWidgetLabel"] {
             color: #ffffff !important;
             font-size: 0.95rem !important;
@@ -237,26 +242,25 @@ if st.session_state.logged_in_user is None:
             border: 1px solid rgba(255, 255, 255, 0.15);
         }
 
-        /* Change Radio Selection Bullets to Theme Purple */
-        div[data-testid="stRadio"] input[type="radio"]:checked + div div {
-            background-color: #9333ea !important;
+        /* Force Purple Accent Color for Radio Buttons & Active Indicators */
+        div[data-testid="stRadio"] label span {
+            color: #ffffff !important;
+        }
+        div[data-testid="stRadio"] div[role="radiogroup"] label div:first-child {
             border-color: #9333ea !important;
         }
-        div[data-testid="stRadio"] label[data-baseweb="radio"] div:first-child {
-            border-color: #9333ea !important;
-        }
-        div[data-testid="stRadio"] input[type="radio"]:checked + div {
+        div[data-testid="stRadio"] div[role="radiogroup"] label div:first-child > div {
             background-color: #9333ea !important;
         }
 
         div.stButton > button {
-            background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%) !important;
+            background: linear-gradient(135deg, #9333ea 0%, #6b21a8 100%) !important;
             color: #ffffff !important;
             border-radius: 10px !important;
             font-size: 1rem !important;
             font-weight: 800 !important;
             border: none !important;
-            box-shadow: 0 4px 15px rgba(124, 58, 237, 0.4) !important;
+            box-shadow: 0 4px 15px rgba(147, 51, 234, 0.4) !important;
         }
         </style>
 
